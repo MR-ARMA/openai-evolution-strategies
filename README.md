@@ -115,7 +115,7 @@ MUJOCO_GL=egl python generate_report.py
 
 | Generation 1 (Initial) | Generation 34 | Generation 67 | Generation 100 | Generation 150 (Final) |
 |:---:|:---:|:---:|:---:|:---:|
-| <video src="03_Implementation/runs/halfcheetah/videos/halfcheetah_gen_0001_ret_0.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/halfcheetah/videos/halfcheetah_gen_0034_ret_2241.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/halfcheetah/videos/halfcheetah_gen_0067_ret_3153.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/halfcheetah/videos/halfcheetah_gen_0100_ret_4395.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/halfcheetah/videos/halfcheetah_gen_0150_ret_5059.mp4" width="130" controls autoplay muted loop></video> |
+| <img src="03_Implementation/runs/halfcheetah/gifs/halfcheetah_gen_0001_ret_0.gif" width="130" /> | <img src="03_Implementation/runs/halfcheetah/gifs/halfcheetah_gen_0034_ret_2241.gif" width="130" /> | <img src="03_Implementation/runs/halfcheetah/gifs/halfcheetah_gen_0067_ret_3153.gif" width="130" /> | <img src="03_Implementation/runs/halfcheetah/gifs/halfcheetah_gen_0100_ret_4395.gif" width="130" /> | <img src="03_Implementation/runs/halfcheetah/gifs/halfcheetah_gen_0150_ret_5059.gif" width="130" /> |
 
 **Final Policy Showcase Video:** [Watch HalfCheetah Final Showcase](03_Implementation/runs/halfcheetah/halfcheetah_final_showcase.mp4)
 
@@ -135,7 +135,7 @@ MUJOCO_GL=egl python generate_report.py
 
 | Generation 1 (Initial) | Generation 34 | Generation 67 | Generation 100 | Generation 150 (Final) |
 |:---:|:---:|:---:|:---:|:---:|
-| <video src="03_Implementation/runs/swimmer/videos/swimmer_gen_0001_ret_-24.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/swimmer/videos/swimmer_gen_0034_ret_344.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/swimmer/videos/swimmer_gen_0067_ret_358.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/swimmer/videos/swimmer_gen_0100_ret_358.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/swimmer/videos/swimmer_gen_0150_ret_359.mp4" width="130" controls autoplay muted loop></video> |
+| <img src="03_Implementation/runs/swimmer/gifs/swimmer_gen_0001_ret_-24.gif" width="130" /> | <img src="03_Implementation/runs/swimmer/gifs/swimmer_gen_0034_ret_344.gif" width="130" /> | <img src="03_Implementation/runs/swimmer/gifs/swimmer_gen_0067_ret_358.gif" width="130" /> | <img src="03_Implementation/runs/swimmer/gifs/swimmer_gen_0100_ret_358.gif" width="130" /> | <img src="03_Implementation/runs/swimmer/gifs/swimmer_gen_0150_ret_359.gif" width="130" /> |
 
 **Final Policy Showcase Video:** [Watch Swimmer Final Showcase](03_Implementation/runs/swimmer/swimmer_final_showcase.mp4)
 
@@ -155,11 +155,12 @@ MUJOCO_GL=egl python generate_report.py
 
 | Generation 1 (Initial) | Generation 34 | Generation 67 | Generation 100 | Generation 150 (Final) |
 |:---:|:---:|:---:|:---:|:---:|
-| <video src="03_Implementation/runs/hopper/videos/hopper_gen_0001_ret_112.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/hopper/videos/hopper_gen_0034_ret_1027.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/hopper/videos/hopper_gen_0067_ret_1028.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/hopper/videos/hopper_gen_0100_ret_1229.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/hopper/videos/hopper_gen_0150_ret_1862.mp4" width="130" controls autoplay muted loop></video> |
+| <img src="03_Implementation/runs/hopper/gifs/hopper_gen_0001_ret_112.gif" width="130" /> | <img src="03_Implementation/runs/hopper/gifs/hopper_gen_0034_ret_1027.gif" width="130" /> | <img src="03_Implementation/runs/hopper/gifs/hopper_gen_0067_ret_1028.gif" width="130" /> | <img src="03_Implementation/runs/hopper/gifs/hopper_gen_0100_ret_1229.gif" width="130" /> | <img src="03_Implementation/runs/hopper/gifs/hopper_gen_0150_ret_1862.gif" width="130" /> |
 
 **Final Policy Showcase Video:** [Watch Hopper Final Showcase](03_Implementation/runs/hopper/hopper_final_showcase.mp4)
 
 ---
+
 
 ### 4. Walker2d-v4 (Continuous Action Space)
 
@@ -175,7 +176,7 @@ MUJOCO_GL=egl python generate_report.py
 
 | Generation 1 (Initial) | Generation 34 | Generation 67 | Generation 100 | Generation 150 (Final) |
 |:---:|:---:|:---:|:---:|:---:|
-| <video src="03_Implementation/runs/walker2d/videos/walker2d_gen_0001_ret_68.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/walker2d/videos/walker2d_gen_0034_ret_991.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/walker2d/videos/walker2d_gen_0067_ret_1046.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/walker2d/videos/walker2d_gen_0100_ret_1221.mp4" width="130" controls autoplay muted loop></video> | <video src="03_Implementation/runs/walker2d/videos/walker2d_gen_0150_ret_1919.mp4" width="130" controls autoplay muted loop></video> |
+| <img src="03_Implementation/runs/walker2d/gifs/walker2d_gen_0001_ret_68.gif" width="130" /> | <img src="03_Implementation/runs/walker2d/gifs/walker2d_gen_0034_ret_991.gif" width="130" /> | <img src="03_Implementation/runs/walker2d/gifs/walker2d_gen_0067_ret_1046.gif" width="130" /> | <img src="03_Implementation/runs/walker2d/gifs/walker2d_gen_0100_ret_1221.gif" width="130" /> | <img src="03_Implementation/runs/walker2d/gifs/walker2d_gen_0150_ret_1919.gif" width="130" /> |
 
 **Final Policy Showcase Video:** [Watch Walker2d Final Showcase](03_Implementation/runs/walker2d/walker2d_final_showcase.mp4)
 
