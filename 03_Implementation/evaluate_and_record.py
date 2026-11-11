@@ -80,14 +80,12 @@ def evaluate_and_record(
     print("-" * 80)
     print(f"Evaluation Summary over {num_episodes} episodes: {mean_ret:.2f} +/- {std_ret:.2f} (Max: {best_ep_ret:.2f})")
 
-    # Save Chasing-Camera MP4 Video of the highest-scoring test rollout
     if len(best_frames) > 0:
         print(f"Saving Chasing-Camera MP4 video ({len(best_frames)} frames @ 30fps) to {video_path}...")
         imageio.mimsave(video_path, best_frames, fps=30)
 
-        # Save 5 evenly spaced PNG snapshots for report inclusion
         indices = np.linspace(0, len(best_frames) - 1, 5, dtype=int)
-        for i, idx in enumerate(indices):
+        for idx in indices:
             frame_file = os.path.join(frames_dir, f"{env_short_name}_step_{idx:04d}.png")
             imageio.imwrite(frame_file, best_frames[idx])
         print(f"Saved 5 keyframe PNG snapshots to {frames_dir}/")

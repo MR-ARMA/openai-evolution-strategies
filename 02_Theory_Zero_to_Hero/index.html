@@ -4,28 +4,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evolution Strategies: Zero to Hero — Theoretical & Mathematical Guide</title>
+  <title>Evolution Strategies: Zero to Hero — Theoretical &amp; Mathematical Guide</title>
   <link rel="stylesheet" href="styles.css" />
   <!-- MathJax for rendering LaTeX equations -->
   <script>
     window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
-        displayMath: [['$$', '$$'], ['\\[', '\\]']]
-      }
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      chtml: { scale: 1.04 }
     };
   </script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
+  <div id="progress"></div>
+  <nav class="topbar" aria-label="Module navigation">
+    <div class="topbar-inner">
+      <span class="brand">ES · ZERO→HERO</span>
+      <a href="#notation" title="Notation cheat-sheet">Σ</a>
+      <a href="#mod-1" title="Agents, environments &amp; biological intuition">01</a>
+      <a href="#mod-2" title="What is theta?">02</a>
+      <a href="#mod-3" title="Black box &amp; non-smoothness">03</a>
+      <a href="#mod-4" title="Probability clouds">04</a>
+      <a href="#mod-5" title="Score function proof">05</a>
+      <a href="#mod-6" title="Algorithm 1 derivation">06</a>
+      <a href="#mod-7" title="Scaling &amp; engineering pillars">07</a>
+      <a href="#mod-8" title="Parameter vs action noise">08</a>
+      <a href="#mod-9" title="Experiments">09</a>
+      <a href="#mod-10" title="Theory to code">10</a>
+    </div>
+  </nav>
+
   <!-- ======================= HERO BANNER ======================= -->
   <header class="hero-header">
     <span class="hero-badge">Part 02 • Theory Zero to Hero</span>
     <h1>Evolution Strategies as a Scalable Alternative to Reinforcement Learning</h1>
     <p>
-      A complete, self-contained mathematical and intuitive curriculum based on Salimans et al. (OpenAI, 2017) — taking you from basic neural network weights to Natural Evolution Strategies, the Log-Derivative Trick, and 1,440-CPU parallelization.
+      A complete, self-contained mathematical and intuitive curriculum based on Salimans, Ho, Chen, Sidor &amp; Sutskever (OpenAI, 2017) — from neural-network weights to Natural Evolution Strategies, the Log-Derivative Trick, antithetic sampling, Virtual Batch Normalization and 1,440-CPU parallelization.
     </p>
+    <div class="hero-meta">
+      <span>arXiv:1703.03864v2</span>
+      <span>10 modules</span>
+      <span>zero-gap proofs</span>
+      <span>14 inline figures</span>
+      <span>interactive lab</span>
+    </div>
   </header>
 
   <main class="container">
@@ -36,14 +63,51 @@
       <ul class="toc-grid">
         <li><a href="#mod-1"><span class="toc-num">01.</span> Level Zero: Agents, Environments &amp; Biological Intuition</a></li>
         <li><a href="#mod-2"><span class="toc-num">02.</span> Inside the Brain: What is $\theta$ in a 3-Layer Neural Network?</a></li>
-        <li><a href="#mod-3"><span class="toc-num">03.</span> The Black-Box Problem &amp; Why Derivatives Do Not Exist</a></li>
+        <li><a href="#mod-3"><span class="toc-num">03.</span> The Black-Box Problem, Non-Smoothness &amp; Gaussian Blur (+ Interactive Lab)</a></li>
         <li><a href="#mod-4"><span class="toc-num">04.</span> Probability Clouds $p_\psi(\theta)$, CMA-ES vs. Isotropic Gaussians</a></li>
         <li><a href="#mod-5"><span class="toc-num">05.</span> Step-by-Step Proof: The Score Function &amp; Log-Derivative Trick</a></li>
         <li><a href="#mod-6"><span class="toc-num">06.</span> Deriving Algorithm 1: From Gaussian PDF to $\frac{1}{\sigma}\epsilon$</a></li>
         <li><a href="#mod-7"><span class="toc-num">07.</span> Scaling to 1,440 CPUs: Algorithm 2 &amp; Six Engineering Pillars</a></li>
-        <li><a href="#mod-8"><span class="toc-num">08.</span> Parameter Space Noise (ES) vs. Action Space Noise (PG)</a></li>
+        <li><a href="#mod-8"><span class="toc-num">08.</span> Parameter-Space Noise (ES) vs. Action-Space Noise (PG), Dimensionality &amp; Advantages</a></li>
+        <li><a href="#mod-9"><span class="toc-num">09.</span> The Evidence: MuJoCo, Atari, Parallel Scaling &amp; Frame-Skip</a></li>
+        <li><a href="#mod-10"><span class="toc-num">10.</span> Theory-to-Code Mapping, Self-Check &amp; Takeaways</a></li>
       </ul>
     </nav>
+
+    <!-- ===================================================================== -->
+    <!-- NOTATION CHEAT-SHEET                                                  -->
+    <!-- ===================================================================== -->
+    <section id="notation" class="module-section">
+      <div class="module-header">
+        <span class="module-tag">Reference • Read First</span>
+        <h2>Notation Cheat-Sheet</h2>
+      </div>
+      <p>Every symbol used in this curriculum, with the section of the paper where it appears. Keep this table in mind as you read; later modules never introduce a symbol without re-defining it.</p>
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr><th>Symbol</th><th>Type</th><th>Meaning</th><th>Paper</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>$\theta$</td><td>vector in $\mathbb{R}^d$</td><td>All policy weights and biases, flattened. In Section 2 it is also the <em>mean</em> of the search distribution.</td><td>§2</td></tr>
+            <tr><td>$d$</td><td>integer</td><td>Number of parameters (dimension of $\theta$).</td><td>§3.2</td></tr>
+            <tr><td>$t$</td><td>integer</td><td>Generation counter in Algorithms 1 and 2; inside an episode, the time step. Context always disambiguates.</td><td>§2</td></tr>
+            <tr><td>$n$</td><td>integer</td><td>Population size: number of perturbations (or workers) per generation.</td><td>Alg. 1–2</td></tr>
+            <tr><td>$\sigma$</td><td>scalar $&gt;0$</td><td>Noise standard deviation; a <strong>fixed hyperparameter</strong> (not adapted).</td><td>§2.1</td></tr>
+            <tr><td>$\epsilon_i$</td><td>vector in $\mathbb{R}^d$</td><td>$i$-th noise vector, $\epsilon_i \sim \mathcal{N}(0, I)$.</td><td>Alg. 1</td></tr>
+            <tr><td>$\alpha$</td><td>scalar $&gt;0$</td><td>Learning rate (step size).</td><td>Alg. 1</td></tr>
+            <tr><td>$F(\cdot)$, $F_i$</td><td>scalar</td><td>Stochastic episode return (fitness). $F_i = F(\theta_t + \sigma\epsilon_i)$.</td><td>§2</td></tr>
+            <tr><td>$u_i$</td><td>scalar in $[-\tfrac12, \tfrac12]$</td><td>Centered-rank (fitness-shaped) version of $F_i$.</td><td>§2.1</td></tr>
+            <tr><td>$\psi$, $p_\psi(\theta)$</td><td>parameters, density</td><td>Parameters and density of the search distribution (the "probability cloud").</td><td>§2</td></tr>
+            <tr><td>$\pi_\theta$, $s_t$, $a_t$</td><td>policy, state, action</td><td>Policy network, observed state, chosen action: $a_t = \pi(s_t;\theta)$.</td><td>§2, §3</td></tr>
+            <tr><td>$T$</td><td>integer</td><td>Episode length (number of decision steps).</td><td>§3.1</td></tr>
+            <tr><td>$\bar{L}$, $m$</td><td>integers</td><td>Mean episode length, and the episode-length cap (set near $2\bar{L}$).</td><td>§2.1</td></tr>
+            <tr><td>$\xi$</td><td>vector in $\mathbb{R}^d$</td><td>Parameter noise in Section 3 notation: $\xi = \sigma\epsilon$.</td><td>§3</td></tr>
+            <tr><td>$\Phi$, $\varphi$</td><td>functions</td><td>Standard normal CDF and PDF (used in worked examples; not in the paper).</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <!-- ===================================================================== -->
     <!-- MODULE 1: LEVEL ZERO & BIOLOGICAL INTUITION                           -->
@@ -51,31 +115,31 @@
     <section id="mod-1" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 01 • Foundations</span>
-        <h2>Level Zero: Agents, Environments &amp; The Biological Intuition</h2>
+        <h2>Level Zero: Agents, Environments &amp; The Biological Intuition <span class="paper-ref">Paper §1–§2</span></h2>
       </div>
 
       <p>
-        Imagine teaching a robot cheetah to run or teaching a computer to play Atari Pong. In Reinforcement Learning (RL), we have two main entities interacting in a closed loop from time step $t = 1$ to the end of an episode at $t = T$:
+        Imagine teaching a robot cheetah to run or teaching a computer to play Atari Pong. In Reinforcement Learning (RL), two entities interact in a closed loop from time step $t = 1$ to the end of an episode at $t = T$:
       </p>
       <ul>
-        <li><strong>The Agent (Policy Network $\pi_\theta$):</strong> The "brain" making decisions. It is a neural network controlled by a list of tunable numbers (weights and biases) denoted by the symbol $\theta$ (theta).</li>
-        <li><strong>The Environment:</strong> The physics simulator (such as MuJoCo) or video game emulator (such as Atari).</li>
+        <li><strong>The Agent (Policy Network $\pi_\theta$):</strong> The "brain" making decisions. It is a neural network controlled by a list of tunable numbers (weights and biases) denoted by $\theta$ (theta).</li>
+        <li><strong>The Environment:</strong> The physics simulator (such as MuJoCo) or video-game emulator (such as Atari).</li>
       </ul>
 
       <p>
-        At every moment $t$, the environment shows the agent the current <strong>State ($s_t$)</strong> (e.g., joint angles of the robot or pixel frames on screen). The neural network processes $s_t$ using its weights $\theta$ and outputs an <strong>Action ($a_t = \pi(s_t; \theta)$)</strong> (e.g., how much torque to apply to each motor). At the end of the episode, the environment outputs a single scalar number called the <strong>Total Return or Fitness ($F(\theta)$)</strong>—the sum of all rewards collected during the episode.
+        At every moment $t$, the environment shows the agent the current <strong>State ($s_t$)</strong> (joint angles of the robot, or pixel frames on screen). The network processes $s_t$ using its weights and outputs an <strong>Action ($a_t = \pi(s_t; \theta)$)</strong> (how much torque to apply to each motor). At the end of the episode the environment yields a single scalar called the <strong>Total Return or Fitness ($F(\theta)$)</strong>—the sum of all rewards collected during the episode.
       </p>
 
       <div class="callout intuition">
-        <span class="callout-title">Clarifying $F(\cdot)$: Is it a Reward or an Action? Is it Discrete or Continuous?</span>
+        <span class="callout-title">Clarifying $F(\cdot)$: Is it a Reward or an Action? Discrete or Continuous?</span>
         <p>
-          <strong>$F(\theta)$ is neither an action nor a single-step reward—it is the Total Episode Return (Fitness).</strong> You feed a complete parameter vector $\theta$ into $F(\cdot)$, the agent plays an entire episode from start to finish, and $F(\theta)$ outputs one scalar score (e.g., $+3150.4$). While the actions $a_t$ can be either <em>discrete</em> (pressing one of 4 joystick buttons in Atari) or <em>continuous</em> (real-valued motor torques like $+0.732$ in MuJoCo), the total return $F(\theta)$ is a scalar number summarizing how well that brain performed.
+          <strong>$F(\theta)$ is neither an action nor a single-step reward—it is the Total Episode Return (Fitness).</strong> You feed a complete parameter vector $\theta$ into $F(\cdot)$, the agent plays an entire episode from start to finish, and $F(\theta)$ returns one scalar (e.g., $+3150.4$). The actions $a_t$ may be <em>discrete</em> (one of 4 joystick buttons in Atari) or <em>continuous</em> (real-valued motor torques like $+0.732$ in MuJoCo); the paper handles both. Because the environment (and possibly the policy) is stochastic, the paper describes $F(\cdot)$ as the <em>stochastic</em> return: calling it twice with the same $\theta$ can give different numbers, and ES simply averages over that randomness.
         </p>
       </div>
 
       <h3>Where is "Evolution" in Evolution Strategies? (One Parent, Many Offspring)</h3>
       <p>
-        When looking at the mathematical equations of the paper, beginners often ask: <em>"Where are the parents, offspring, genes, and generations?"</em> In OpenAI's Evolution Strategies, <strong>there is only ONE single Parent parameter vector ($\theta_t$) at each generation $t$</strong>. Here is the exact dictionary mapping Darwinian biology to the paper's mathematics:
+        The paper describes ES as heuristic search procedures inspired by natural evolution: at every generation a population of parameter vectors ("genotypes") is perturbed ("mutated"), their objective values ("fitness") are evaluated, and the highest scoring vectors are recombined to form the next population. In OpenAI's ES, <strong>there is only ONE single parent parameter vector ($\theta_t$) at each generation $t$</strong>; the "population" is a cloud of mutated copies of it. Here is the dictionary mapping Darwinian biology to the paper's mathematics:
       </p>
 
       <div class="data-table-wrapper">
@@ -101,76 +165,84 @@
             <tr>
               <td><strong>The Single Parent</strong></td>
               <td>$\theta_t$</td>
-              <td>The master neural network parameter vector at the start of generation $t$.</td>
+              <td>The master parameter vector at the start of generation $t$ (the mean of the Gaussian cloud).</td>
             </tr>
             <tr>
               <td><strong>Genetic Mutation</strong></td>
-              <td>$+\sigma \epsilon_i$ where $\epsilon_i \sim \mathcal{N}(0, I)$</td>
+              <td>$+\sigma \epsilon_i$, $\epsilon_i \sim \mathcal{N}(0, I)$</td>
               <td>Random Gaussian noise added to the parent's weights to create variation.</td>
             </tr>
             <tr>
               <td><strong>Offspring Population</strong></td>
               <td>$\tilde{\theta}_i = \theta_t + \sigma \epsilon_i$ ($i=1\dots n$)</td>
-              <td>$n$ perturbed copies of the parent network tested in parallel episodes.</td>
+              <td>$n$ perturbed copies of the parent, each tested in its own episode (in parallel).</td>
             </tr>
             <tr>
               <td><strong>Fitness Score</strong></td>
               <td>$F_i = F(\theta_t + \sigma \epsilon_i)$</td>
-              <td>The total episode return achieved by the $i$-th offspring in the environment.</td>
+              <td>The total episode return achieved by the $i$-th offspring.</td>
+            </tr>
+            <tr>
+              <td><strong>Selection</strong></td>
+              <td>weights $F_i$ (or $u_i$)</td>
+              <td>A <em>soft</em> selection: no offspring is discarded; each contributes in proportion to its (shaped) fitness, and below-average ones contribute negatively.</td>
             </tr>
             <tr>
               <td><strong>Recombination</strong></td>
               <td>$\theta_{t+1} \leftarrow \theta_t + \frac{\alpha}{n\sigma}\sum_{i=1}^n F_i \epsilon_i$</td>
-              <td>Combining all offspring perturbations weighted by their fitness to form the next generation's parent.</td>
+              <td>Fitness-weighted combination of all offspring perturbations forms the next generation's parent (Algorithm 1, line 5).</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- SVG Diagram: Tug-of-War Recombination -->
+      <!-- SVG Diagram 1.1: Tug-of-War Recombination -->
       <div class="diagram-container">
-        <svg viewBox="0 0 760 300" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
-          <rect width="760" height="300" rx="10" fill="#0b1120" />
-          <!-- Grid lines -->
-          <line x1="380" y1="20" x2="380" y2="280" stroke="#1e293b" stroke-width="1" stroke-dasharray="4"/>
-          <line x1="40" y1="160" x2="720" y2="160" stroke="#1e293b" stroke-width="1" stroke-dasharray="4"/>
+        <svg class="fig" viewBox="0 0 760 330" role="img" aria-label="Geometric tug-of-war: three offspring pull or push the parent according to their returns">
+          <defs>
+            <marker id="arrA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--accent-amber)"/></marker>
+          </defs>
+          <rect class="sv-bg" width="760" height="330" rx="10"/>
+          <line class="sv-grid" x1="380" y1="20" x2="380" y2="310"/>
+          <line class="sv-grid" x1="40" y1="170" x2="720" y2="170"/>
 
-          <!-- Offspring 1 (High Fitness) -->
-          <line x1="380" y1="160" x2="560" y2="55" stroke="#34d399" stroke-width="4" />
-          <circle cx="560" cy="55" r="14" fill="#065f46" stroke="#34d399" stroke-width="3" />
-          <text x="585" y="50" fill="#34d399" font-family="sans-serif" font-size="13" font-weight="bold">Offspring 1 (θ_t + σε_1)</text>
-          <text x="585" y="68" fill="#cbd5e1" font-family="sans-serif" font-size="12">High Return: F_1 = +50 (Strong Pull!)</text>
+          <!-- Offspring 1: high fitness -->
+          <line class="sg w4" x1="380" y1="170" x2="580" y2="60"/>
+          <circle class="fg-d sg w3" cx="580" cy="60" r="14"/>
+          <text class="fg bd" x="600" y="48">Offspring 1: θ_t + σε_1</text>
+          <text x="600" y="66" class="sm">High return F_1 = +50 → strong pull</text>
 
-          <!-- Offspring 2 (Moderate Fitness) -->
-          <line x1="380" y1="160" x2="220" y2="95" stroke="#38bdf8" stroke-width="2" />
-          <circle cx="220" cy="95" r="11" fill="#0c4a6e" stroke="#38bdf8" stroke-width="2" />
-          <text x="55" y="90" fill="#38bdf8" font-family="sans-serif" font-size="13" font-weight="bold">Offspring 2 (θ_t + σε_2)</text>
-          <text x="55" y="108" fill="#cbd5e1" font-family="sans-serif" font-size="12">Moderate Return: F_2 = +10</text>
+          <!-- Offspring 2: moderate fitness -->
+          <line class="sb w2" x1="380" y1="170" x2="210" y2="105"/>
+          <circle class="fb-d sb w2" cx="210" cy="105" r="11"/>
+          <text class="fb bd" x="40" y="92">Offspring 2: θ_t + σε_2</text>
+          <text x="40" y="110" class="sm">Moderate return F_2 = +10 → weak pull</text>
 
-          <!-- Offspring 3 (Negative Fitness - Repulsion) -->
-          <line x1="380" y1="160" x2="280" y2="250" stroke="#fb7185" stroke-width="2" stroke-dasharray="5,5" />
-          <circle cx="280" cy="250" r="11" fill="#881337" stroke="#fb7185" stroke-width="2" />
-          <text x="80" y="248" fill="#fb7185" font-family="sans-serif" font-size="13" font-weight="bold">Offspring 3 (θ_t + σε_3)</text>
-          <text x="80" y="266" fill="#cbd5e1" font-family="sans-serif" font-size="12">Bad Return: F_3 = -25 (Pushes Away!)</text>
+          <!-- Offspring 3: negative fitness -->
+          <line class="sr w2 dash" x1="380" y1="170" x2="270" y2="270"/>
+          <circle class="fr-d sr w2" cx="270" cy="270" r="11"/>
+          <text class="fr bd" x="40" y="262">Offspring 3: θ_t + σε_3</text>
+          <text x="40" y="280" class="sm">Bad return F_3 = −25 → pushes AWAY (along −ε_3)</text>
 
-          <!-- New Parent Vector Arrow -->
-          <line x1="380" y1="160" x2="495" y2="85" stroke="#fbbf24" stroke-width="5" />
-          <circle cx="495" cy="85" r="16" fill="#78350f" stroke="#fbbf24" stroke-width="3" />
-          <text x="455" y="125" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold">New Parent θ_{t+1}</text>
+          <!-- New parent -->
+          <line class="sa w4" x1="380" y1="170" x2="484" y2="88" marker-end="url(#arrA)"/>
+          <circle class="fa-d sa w3" cx="484" cy="88" r="15"/>
+          <text class="fa bd lg" x="498" y="128">New parent θ_{t+1}</text>
 
-          <!-- Current Parent Center -->
-          <circle cx="380" cy="160" r="16" fill="#312e81" stroke="#818cf8" stroke-width="3" />
-          <text x="345" y="195" fill="#818cf8" font-family="sans-serif" font-size="14" font-weight="bold">Parent θ_t</text>
+          <!-- Current parent -->
+          <circle class="fi-d si w3" cx="380" cy="170" r="16"/>
+          <text class="fi bd lg" x="348" y="206">Parent θ_t</text>
+          <text x="40" y="318" class="xs fm">Illustrative, not to scale: arrow ∝ Σ F_i ε_i = 50·ε_1 + 10·ε_2 − 25·ε_3</text>
         </svg>
         <div class="diagram-caption">
-          <strong>Figure 1.1 — Geometric Tug-of-War Intuition:</strong> The single parent $\theta_t$ spawns offspring in random directions $\epsilon_i$. Each offspring pulls the parent toward its direction proportional to its return $F_i$ (or pushes it away if $F_i &lt; 0$), producing the next generation's parent $\theta_{t+1}$.
+          <strong>Figure 1.1 — Geometric Tug-of-War Intuition:</strong> The single parent $\theta_t$ spawns offspring in random directions $\epsilon_i$. With raw returns, each offspring pulls the parent toward its direction in proportion to $F_i$ (or pushes it away if $F_i &lt; 0$). With the centered-rank weights $u_i$ used in practice (Module 7), exactly the below-median offspring push away. The weighted sum is the next parent $\theta_{t+1}$.
         </div>
       </div>
 
       <!-- ==================== VISUAL BLUEPRINT 1: MUJOCO SENSOR-TO-TORQUE LOOP ==================== -->
       <h3>Visualizing the Agent-Environment Loop: Continuous Robotics (MuJoCo)</h3>
       <p>
-        Before looking at how hundreds of networks evolve across generations, let us look inside a <strong>single episode rollout</strong> to see what data enters the neural network and what comes out. In continuous physics control tasks like MuJoCo, the neural network acts as a direct closed-loop controller mapping physical joint sensors to motor torques:
+        Before looking at how hundreds of networks evolve across generations, let us look inside a <strong>single episode rollout</strong> to see what data enters the neural network and what comes out. In continuous physics control tasks like MuJoCo, the network acts as a closed-loop controller mapping physical sensor readings to motor torques. The paper uses multilayer perceptrons with two 64-unit hidden layers separated by $\tanh$ nonlinearities (Section 4.1):
       </p>
 
       <div class="blueprint-card">
@@ -191,19 +263,19 @@
           <div class="blueprint-step-item">
             <h5>1. Physics State Extraction ($s_t$)</h5>
             <p>
-              At each time step, the MuJoCo simulator extracts exact continuous physical measurements from the robot (such as the 3D Humanoid or 2D HalfCheetah)—specifically joint angles and angular velocities $(\theta, \dot{\theta})$—and sends them as state vector $s_t$.
+              At each time step, the MuJoCo simulator extracts continuous physical measurements from the robot (such as the 3D Humanoid or 2D HalfCheetah)—joint angles and angular velocities $(\theta, \dot{\theta})$—and sends them as state vector $s_t$.
             </p>
           </div>
           <div class="blueprint-step-item indigo">
             <h5>2. Feedforward MLP ($\pi_\theta$)</h5>
             <p>
-              The state vector $s_t$ enters the Input Layer and passes through two fully connected hidden layers of $64$ units each with smooth $\tanh$ nonlinear activations, parameterized by the flat weight vector $\theta$.
+              The state vector $s_t$ enters the input layer and passes through two fully connected hidden layers of $64$ units each with smooth $\tanh$ nonlinearities, parameterized by the flat weight vector $\theta$.
             </p>
           </div>
           <div class="blueprint-step-item amber">
             <h5>3. Motor Torque Actuation ($a_t$)</h5>
             <p>
-              The Output Layer emits continuous real-valued actions $a_t$ corresponding directly to physical motor torques ($\tau$) applied back to the robot's hinges for the next physics step.
+              The output layer emits continuous real-valued actions $a_t$ corresponding to motor torques ($\tau$) applied to the robot's hinges for the next physics step.
             </p>
           </div>
         </div>
@@ -212,7 +284,7 @@
       <!-- ==================== VISUAL BLUEPRINT 2: MACRO ES OPTIMIZATION CYCLE ==================== -->
       <h3>The Complete Big Picture: End-to-End Evolution Strategies Optimization Cycle</h3>
       <p>
-        Now that we know how a single parameter vector $\theta$ controls a robot inside an episode, how does the paper optimize $\theta$ without ever computing backpropagation through the simulator? The diagram below illustrates the complete 4-stage evolutionary cycle executed at every generation $t$:
+        Now that we know how a single parameter vector $\theta$ controls a robot inside an episode, how does the paper optimize $\theta$ without ever backpropagating through the simulator? The diagram below illustrates the 4-stage evolutionary cycle executed at every generation $t$:
       </p>
 
       <div class="blueprint-card">
@@ -233,7 +305,7 @@
           <div class="blueprint-step-item">
             <h5>1. Parent Policy Network ($\theta_t$)</h5>
             <p>
-              Each generation $t$ begins with a <strong>single master parent network</strong> parameterized by vector $\theta_t$. This parent represents the center of our Gaussian search cloud.
+              Each generation $t$ begins with a <strong>single master parent network</strong> parameterized by vector $\theta_t$. This parent is the center of our Gaussian search cloud.
             </p>
           </div>
           <div class="blueprint-step-item indigo">
@@ -245,7 +317,7 @@
           <div class="blueprint-step-item emerald">
             <h5>3. Parallel Black-Box Evaluation</h5>
             <p>
-              Each offspring $\theta_i$ is dispatched to an independent CPU worker ($1 \dots n$) and plays a full episode in the environment (forward pass only, zero backpropagation), returning a single scalar fitness score $F_i$.
+              Each offspring $\theta_i$ is dispatched to an independent CPU worker ($1 \dots n$) and plays a full episode (forward pass only, zero backpropagation), returning a single scalar fitness score $F_i$.
             </p>
           </div>
           <div class="blueprint-step-item amber">
@@ -264,11 +336,11 @@
     <section id="mod-2" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 02 • Parameter Anatomy</span>
-        <h2>Inside the Brain: What is $\theta$ in a 3-Layer Neural Network?</h2>
+        <h2>Inside the Brain: What is $\theta$ in a 3-Layer Neural Network? <span class="paper-ref">Paper §2</span></h2>
       </div>
 
       <p>
-        In every equation of the paper, you see the symbol $\theta$. What is its exact data type and structure? In a neural network, weights are stored layer-by-layer as 2D matrices ($W$) and 1D bias vectors ($b$). To apply Evolution Strategies, we <strong>flatten and concatenate</strong> every matrix and bias vector into one giant 1D column vector $\theta \in \mathbb{R}^d$.
+        In every equation of the paper you see the symbol $\theta$. What is its exact data type? In a neural network, weights are stored layer by layer as 2D matrices ($W$) and 1D bias vectors ($b$). To apply Evolution Strategies we <strong>flatten and concatenate</strong> every matrix and bias vector into one long column vector $\theta \in \mathbb{R}^d$. ES never needs to know which entry is which—noise is added entry-wise—so this flat view is all the algorithm ever sees.
       </p>
 
       <h3>Concrete Example: A 3-Layer Network with 5 Neurons per Layer</h3>
@@ -276,16 +348,74 @@
         Suppose our policy network takes $5$ state inputs, passes them through two hidden layers of $5$ neurons each, and outputs $1$ motor action:
       </p>
       <ul>
-        <li><strong>Layer 1 ($5 \to 5$):</strong> Weight matrix $W^{(1)} \in \mathbb{R}^{5 \times 5}$ ($25$ weights) + Bias vector $b^{(1)} \in \mathbb{R}^{5}$ ($5$ biases) = $30$ parameters.</li>
-        <li><strong>Layer 2 ($5 \to 5$):</strong> Weight matrix $W^{(2)} \in \mathbb{R}^{5 \times 5}$ ($25$ weights) + Bias vector $b^{(2)} \in \mathbb{R}^{5}$ ($5$ biases) = $30$ parameters.</li>
-        <li><strong>Layer 3 ($5 \to 1$):</strong> Weight matrix $W^{(3)} \in \mathbb{R}^{5 \times 1}$ ($5$ weights) + Bias scalar $b^{(3)} \in \mathbb{R}^{1}$ ($1$ bias) = $6$ parameters.</li>
+        <li><strong>Layer 1 ($5 \to 5$):</strong> $W^{(1)} \in \mathbb{R}^{5 \times 5}$ ($25$ weights) + $b^{(1)} \in \mathbb{R}^{5}$ ($5$ biases) = $30$ parameters.</li>
+        <li><strong>Layer 2 ($5 \to 5$):</strong> $W^{(2)} \in \mathbb{R}^{5 \times 5}$ ($25$ weights) + $b^{(2)} \in \mathbb{R}^{5}$ ($5$ biases) = $30$ parameters.</li>
+        <li><strong>Layer 3 ($5 \to 1$):</strong> $W^{(3)} \in \mathbb{R}^{5 \times 1}$ ($5$ weights) + $b^{(3)} \in \mathbb{R}^{1}$ ($1$ bias) = $6$ parameters.</li>
       </ul>
       <p>
-        Total parameter count: $d = 30 + 30 + 6 = 66$ floating-point numbers. Here is how the 2D matrices map into the single flat vector $\theta$:
+        Total parameter count: $d = 30 + 30 + 6 = 66$. In general, for layer sizes $n_0 \to n_1 \to \dots \to n_L$ the count is $d = \sum_{\ell=1}^{L} (n_{\ell-1} + 1)\, n_\ell$.
       </p>
 
+      <!-- SVG Diagram 2.1: Network and flattening -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 390" role="img" aria-label="A 5-5-5-1 network whose weights and biases are flattened into a 66-dimensional vector theta">
+          <rect class="sv-bg" width="760" height="390" rx="10"/>
+          <text class="fm bd sm mid" x="80" y="30">Input s_t (5)</text>
+          <text class="fm bd sm mid" x="230" y="30">Hidden 1 (5)</text>
+          <text class="fm bd sm mid" x="380" y="30">Hidden 2 (5)</text>
+          <text class="fm bd sm mid" x="530" y="30">Output a_t (1)</text>
+
+          <!-- edges -->
+          <path class="nofill sb w1 faint" d="M80 60L230 60M80 60L230 100M80 60L230 140M80 60L230 180M80 60L230 220M80 100L230 60M80 100L230 100M80 100L230 140M80 100L230 180M80 100L230 220M80 140L230 60M80 140L230 100M80 140L230 140M80 140L230 180M80 140L230 220M80 180L230 60M80 180L230 100M80 180L230 140M80 180L230 180M80 180L230 220M80 220L230 60M80 220L230 100M80 220L230 140M80 220L230 180M80 220L230 220"/>
+          <path class="nofill si w1 faint" d="M230 60L380 60M230 60L380 100M230 60L380 140M230 60L380 180M230 60L380 220M230 100L380 60M230 100L380 100M230 100L380 140M230 100L380 180M230 100L380 220M230 140L380 60M230 140L380 100M230 140L380 140M230 140L380 180M230 140L380 220M230 180L380 60M230 180L380 100M230 180L380 140M230 180L380 180M230 180L380 220M230 220L380 60M230 220L380 100M230 220L380 140M230 220L380 180M230 220L380 220"/>
+          <path class="nofill sg w1 faint" d="M380 60L530 140M380 100L530 140M380 140L530 140M380 180L530 140M380 220L530 140"/>
+
+          <!-- nodes -->
+          <g class="fb-d sb w2">
+            <circle cx="80" cy="60" r="11"/><circle cx="80" cy="100" r="11"/><circle cx="80" cy="140" r="11"/><circle cx="80" cy="180" r="11"/><circle cx="80" cy="220" r="11"/>
+          </g>
+          <g class="fi-d si w2">
+            <circle cx="230" cy="60" r="11"/><circle cx="230" cy="100" r="11"/><circle cx="230" cy="140" r="11"/><circle cx="230" cy="180" r="11"/><circle cx="230" cy="220" r="11"/>
+            <circle cx="380" cy="60" r="11"/><circle cx="380" cy="100" r="11"/><circle cx="380" cy="140" r="11"/><circle cx="380" cy="180" r="11"/><circle cx="380" cy="220" r="11"/>
+          </g>
+          <circle class="fg-d sg w2" cx="530" cy="140" r="12"/>
+
+          <text class="fb bd mid" x="155" y="258">W¹: 25 + b¹: 5 = 30</text>
+          <text class="fi bd mid" x="305" y="258">W²: 25 + b²: 5 = 30</text>
+          <text class="fg bd mid" x="455" y="258">W³: 5 + b³: 1 = 6</text>
+
+          <text class="fw xl" x="600" y="125">d = 66</text>
+          <text class="sm" x="600" y="148">every arrow = 1 weight</text>
+          <text class="sm" x="600" y="166">every non-input neuron = 1 bias</text>
+
+          <text class="fm bd mid" x="380" y="284">▼ flatten &amp; concatenate (order is arbitrary but fixed) ▼</text>
+
+          <!-- flat vector bar: 66 cells over 680 px = 10.303 px each -->
+          <rect class="fb-d sb w2" x="40" y="298" width="257.6" height="30"/>
+          <rect class="fb sb w2" style="fill-opacity:.55" x="297.6" y="298" width="51.5" height="30"/>
+          <rect class="fi-d si w2" x="349.1" y="298" width="257.6" height="30"/>
+          <rect class="fi si w2" style="fill-opacity:.55" x="606.7" y="298" width="51.5" height="30"/>
+          <rect class="fg-d sg w2" x="658.2" y="298" width="51.5" height="30"/>
+          <rect class="fg sg w2" style="fill-opacity:.55" x="709.7" y="298" width="10.3" height="30"/>
+          <text class="fb bd mid sm" x="168.8" y="318">W¹ (25)</text>
+          <text class="fw bd mid xs" x="323.3" y="318">b¹ (5)</text>
+          <text class="fi bd mid sm" x="477.9" y="318">W² (25)</text>
+          <text class="fw bd mid xs" x="632.5" y="318">b² (5)</text>
+          <text class="fg bd mid xs" x="684" y="318">W³ (5)</text>
+          <line class="sg w1" x1="715" y1="328" x2="715" y2="342"/>
+          <text class="fg bd xs end" x="722" y="356">b³ (1)</text>
+          <text class="fm xs mo" x="40" y="292">θ[0]</text>
+          <text class="fm xs mo end" x="720" y="292">θ[65]</text>
+          <text class="fm xs" x="40" y="356">θ ∈ ℝ⁶⁶ — the only object ES ever perturbs and updates</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 2.1 — From Network to Genotype:</strong> The 5–5–5–1 network on top owns $25+5+25+5+5+1 = 66$ numbers. Concatenated, they form the single vector $\theta \in \mathbb{R}^{66}$ at the bottom (segment widths are proportional to the parameter counts). Mutating the network means adding a 66-dimensional noise vector to this strip.
+        </div>
+      </div>
+
+      <p>Here is the same mapping as explicit matrices:</p>
+
       <div class="matrix-row">
-        <!-- Matrix W1 -->
         <div class="matrix-card">
           <h5>Layer 1: $W^{(1)}$ (5×5)</h5>
           <div class="matrix-grid" style="grid-template-columns: repeat(5, 1fr);">
@@ -296,7 +426,6 @@
           </div>
         </div>
 
-        <!-- Matrix W2 -->
         <div class="matrix-card">
           <h5>Layer 2: $W^{(2)}$ (5×5)</h5>
           <div class="matrix-grid" style="grid-template-columns: repeat(5, 1fr);">
@@ -307,7 +436,6 @@
           </div>
         </div>
 
-        <!-- Matrix W3 -->
         <div class="matrix-card">
           <h5>Layer 3: $W^{(3)}$ (5×1)</h5>
           <div class="matrix-grid" style="grid-template-columns: 1fr;">
@@ -336,8 +464,15 @@
       </div>
 
       <p style="margin-top: 1rem;">
-        When we mutate the parent network by adding Gaussian noise ($\tilde{\theta} = \theta + \sigma \epsilon$), we simply generate a 1D vector $\epsilon$ of $66$ random numbers from $\mathcal{N}(0, 1)$, multiply by $\sigma$, add it element-wise to $\theta$, and reshape those $66$ numbers back into $W^{(1)}, b^{(1)}, W^{(2)}, b^{(2)}, W^{(3)}, b^{(3)}$ to run the forward pass!
+        When we mutate the parent ($\tilde{\theta} = \theta + \sigma \epsilon$) we generate a 1D vector $\epsilon$ of $66$ numbers from $\mathcal{N}(0, 1)$, multiply by $\sigma$, add it element-wise to $\theta$, and reshape the result back into $W^{(1)}, b^{(1)}, W^{(2)}, b^{(2)}, W^{(3)}, b^{(3)}$ to run the forward pass.
       </p>
+
+      <div class="callout math-highlight">
+        <span class="callout-title">Scale check: how big is $d$ in the paper's experiments?</span>
+        <p>
+          For the MuJoCo policies (two hidden layers of 64 $\tanh$ units), $d = (n_s + 1)\cdot 64 + 65 \cdot 64 + 65\, n_a$ for $n_s$ state inputs and $n_a$ action outputs. As an illustration, a HalfCheetah-sized policy with $17$ inputs and $6$ outputs has $d = 1152 + 4160 + 390 = 5{,}702$ parameters. The Atari convolutional policies are far larger (hundreds of thousands to millions), which is why the paper's design avoids any $d\times d$ object (Module 4).
+        </p>
+      </div>
     </section>
 
     <!-- ===================================================================== -->
@@ -346,30 +481,31 @@
     <section id="mod-3" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 03 • Core Motivation</span>
-        <h2>Why Standard Backpropagation Fails: The Black Box &amp; Non-Smoothness</h2>
+        <h2>Why Standard Backpropagation Fails: The Black Box, Non-Smoothness &amp; Gaussian Blur <span class="paper-ref">Paper §2–§3</span></h2>
       </div>
 
       <p>
-        A natural question arises: <em>"If the total return $F(\theta)$ is a continuous number (like $45.25$), why can't we just compute the derivative $\nabla_\theta F(\theta)$ directly using backpropagation?"</em> There are two fundamental reasons:
+        A natural question: <em>"If the total return $F(\theta)$ is a number like $45.25$, why not compute $\nabla_\theta F(\theta)$ directly with backpropagation?"</em> The paper (Section 3) gives two obstacles: the gradients may not exist because of non-smoothness of the environment or policy, and even when they do, we have no explicit access to the underlying state-transition function, so a backpropagation-like algorithm cannot compute them.
       </p>
 
       <h3>Reason 1: The Environment is a Locked "Black Box"</h3>
       <p>
-        To compute $\frac{\partial F(\theta)}{\partial \theta}$ via the Chain Rule of calculus, we must multiply derivatives across every step of the episode:
+        Write the simulator as a transition $s_{t+1} = f(s_t, a_t)$, the policy as $a_t = \pi(s_t;\theta)$ and the return as $F(\theta) = \sum_{t=1}^{T} r(s_t, a_t)$. Differentiating through time requires the chain rule at every step:
       </p>
       <div class="formula-box">
-        $$\frac{\partial F(\theta)}{\partial \theta} = \underbrace{\frac{\partial R}{\partial s_T} \cdot \frac{\partial s_T}{\partial a_{T-1}}}_{\text{Inside Black-Box Simulator (UNKNOWN!)}} \times \underbrace{\frac{\partial a_{T-1}}{\partial \theta}}_{\text{Inside Neural Net (Known)}}$$
+        <span class="formula-label">Chain rule through an episode</span>
+        $$\frac{d s_{t+1}}{d\theta} = \underbrace{\frac{\partial f}{\partial s}}_{\text{simulator: UNKNOWN}} \frac{d s_t}{d\theta} + \underbrace{\frac{\partial f}{\partial a}}_{\text{simulator: UNKNOWN}} \Big( \underbrace{\frac{\partial \pi}{\partial s}\frac{d s_t}{d\theta} + \frac{\partial \pi}{\partial \theta}}_{\text{inside the neural net: known}} \Big), \qquad \frac{dF}{d\theta} = \sum_{t=1}^{T} \Big( \frac{\partial r}{\partial s}\frac{d s_t}{d\theta} + \frac{\partial r}{\partial a}\frac{d a_t}{d\theta} \Big)$$
       </div>
       <p>
-        While we know the exact algebraic equations inside our neural network (a <strong>White Box</strong>), the physics simulator (MuJoCo or the Atari C++ emulator) is a <strong>Black Box</strong>. It calculates collisions, friction, and RAM state transitions using compiled code and <code>if/else</code> statements. Because we do not have an explicit differentiable formula for the environment's state transition function, the chain rule breaks immediately.
+        The network is a <strong>White Box</strong> (we know $\partial \pi / \partial \theta$ exactly), but the physics engine (MuJoCo) or Atari emulator is a <strong>Black Box</strong>: collisions, friction and RAM transitions are compiled code with branches. We can only <em>sample</em> it by running episodes, so $\partial f/\partial s$ and $\partial f/\partial a$ are unavailable and the chain breaks at the first simulator factor.
       </p>
 
       <h3>Reason 2: Derivatives Literally Do Not Exist (Non-Smooth Step Functions)</h3>
       <p>
-        Even if we knew the simulator's code, discrete actions or physical contact thresholds create <strong>step functions</strong> where the derivative is zero almost everywhere and undefined ($\infty$) at the jump boundary.
+        Even with the simulator's source code, discrete actions or contact thresholds create <strong>step functions</strong>: the derivative is zero almost everywhere and undefined at the jump.
       </p>
       <p>
-        <strong>Concrete Numerical Example:</strong> Suppose a 1-parameter network has weight $\theta$. If $\theta &lt; 2.0$, the agent presses "Left" and loses ($F(\theta) = 0$). If $\theta \ge 2.0$, the agent presses "Right" and wins ($F(\theta) = +10$). Look at the local slope $\frac{\Delta F}{\Delta \theta}$ at different values of $\theta$:
+        <strong>Concrete Numerical Example:</strong> a 1-parameter network. If $\theta &lt; 2.0$ the agent presses "Left" and loses ($F(\theta) = 0$); if $\theta \ge 2.0$ it presses "Right" and wins ($F(\theta) = +10$). That is $F(\theta) = 10\cdot\mathbf{1}[\theta \ge 2]$. The local slope $\frac{\Delta F}{\Delta \theta}$ is:
       </p>
 
       <div class="data-table-wrapper">
@@ -383,68 +519,117 @@
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>$\theta = 1.0000$</td>
-              <td>Left</td>
-              <td>$0$</td>
-              <td>$\mathbf{0}$ (Flat plateau — blind!)</td>
-            </tr>
-            <tr>
-              <td>$\theta = 1.9999$</td>
-              <td>Left</td>
-              <td>$0$</td>
-              <td>$\mathbf{0}$ (Still flat!)</td>
-            </tr>
-            <tr>
-              <td><strong>$\theta = 2.0000$ (Threshold)</strong></td>
-              <td><strong>Jumps Left $\to$ Right</strong></td>
-              <td><strong>Jumps $0 \to +10$</strong></td>
-              <td><strong>Undefined ($\infty$ discontinuity)</strong></td>
-            </tr>
-            <tr>
-              <td>$\theta = 2.5000$</td>
-              <td>Right</td>
-              <td>$+10$</td>
-              <td>$\mathbf{0}$ (Flat plateau)</td>
-            </tr>
+            <tr><td>$\theta = 1.0000$</td><td>Left</td><td>$0$</td><td>$\mathbf{0}$ (flat plateau — blind!)</td></tr>
+            <tr><td>$\theta = 1.9999$</td><td>Left</td><td>$0$</td><td>$\mathbf{0}$ (still flat!)</td></tr>
+            <tr><td><strong>$\theta = 2.0000$ (threshold)</strong></td><td><strong>Jumps Left $\to$ Right</strong></td><td><strong>Jumps $0 \to +10$</strong></td><td><strong>Undefined ($\infty$ discontinuity)</strong></td></tr>
+            <tr><td>$\theta = 2.5000$</td><td>Right</td><td>$+10$</td><td>$\mathbf{0}$ (flat plateau)</td></tr>
           </tbody>
         </table>
       </div>
 
-      <!-- SVG Diagram: Step Function vs Gaussian Blur -->
+      <h3>The ES Cure: Add Noise in Parameter Space (Gaussian Blur)</h3>
+      <p>
+        The paper's fix (Section 2) is to optimize not $F(\theta)$ but its expectation under Gaussian parameter noise, a "Gaussian-blurred version of the original objective $F$, free of non-smoothness introduced by the environment or potentially discrete actions taken by the policy." Define
+      </p>
+      <div class="formula-box">
+        $$J_\sigma(\theta) \;=\; \mathbb{E}_{\epsilon \sim \mathcal{N}(0,I)}\, F(\theta + \sigma\epsilon) \;=\; \int F(y)\, \varphi_\sigma(y - \theta)\, dy \;=\; (F * \varphi_\sigma)(\theta)$$
+      </div>
+      <p>
+        where $\varphi_\sigma$ is the $\mathcal{N}(0,\sigma^2 I)$ density. <strong>Why is this smooth?</strong> $J_\sigma$ is a <em>convolution</em> of $F$ with a Gaussian kernel. All $\theta$-dependence now sits inside the infinitely differentiable kernel $\varphi_\sigma(y-\theta)$, so for any bounded (measurable) return $F$—however jagged—$J_\sigma$ is infinitely differentiable. We have moved the derivative from the unknown $F$ onto a Gaussian we fully control.
+      </p>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Exact check on the cliff: $J_\sigma$ and its gradient in closed form</span>
+        <p>For $F(\theta) = 10\cdot\mathbf{1}[\theta \ge 2]$ in one dimension, $F(\theta+\sigma\epsilon) = 10$ exactly when $\epsilon \ge a$ with $a = (2-\theta)/\sigma$. Hence</p>
+        $$J_\sigma(\theta) = 10\,\Pr[\epsilon \ge a] = 10\,\Phi\!\Big(\frac{\theta - 2}{\sigma}\Big), \qquad \frac{dJ_\sigma}{d\theta} = \frac{10}{\sigma}\,\varphi\!\Big(\frac{\theta-2}{\sigma}\Big) &gt; 0 \text{ everywhere.}$$
+        <p>Now verify that the <strong>score-function formula</strong> of Module 6, $\frac{1}{\sigma}\mathbb{E}[F(\theta+\sigma\epsilon)\epsilon]$, gives the same answer. Using $\int_a^\infty z\,\varphi(z)\,dz = \varphi(a)$ (because $\varphi'(z) = -z\varphi(z)$):</p>
+        $$\frac{1}{\sigma}\mathbb{E}\big[F(\theta+\sigma\epsilon)\,\epsilon\big] = \frac{10}{\sigma}\int_{a}^{\infty} z\,\varphi(z)\,dz = \frac{10}{\sigma}\varphi(a) = \frac{10}{\sigma}\varphi\!\Big(\frac{\theta-2}{\sigma}\Big)\quad\checkmark$$
+        <p><strong>Numbers:</strong> take $\theta = 1.5$ (parent on the flat "Left" plateau) and $\sigma = 0.5$, so $a = 1$. Then $J_\sigma = 10\,\Phi(-1) = 10 \times 0.1587 = 1.587$ and the gradient is $\frac{10}{0.5}\varphi(1) = 20 \times 0.2420 = \mathbf{4.84}$, a clear uphill signal where the raw derivative of $F$ is exactly $0$. Moving the parent to $\theta = 1.0$ gives $20\,\varphi(2) = 1.08$: the signal fades with distance from the cliff, but it never vanishes.</p>
+      </div>
+
+      <!-- SVG Diagram 3.1: Step Function vs Gaussian Blur -->
       <div class="diagram-container">
-        <svg viewBox="0 0 760 280" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
-          <rect width="760" height="280" rx="10" fill="#0b1120" />
-          <!-- Axes -->
-          <line x1="70" y1="230" x2="700" y2="230" stroke="#64748b" stroke-width="2" />
-          <line x1="70" y1="30" x2="70" y2="230" stroke="#64748b" stroke-width="2" />
-          <text x="640" y="255" fill="#94a3b8" font-family="sans-serif" font-size="13">Weight Parameter (θ)</text>
-          <text x="15" y="45" fill="#94a3b8" font-family="sans-serif" font-size="13">F(θ)</text>
+        <svg class="fig" viewBox="0 0 760 290" role="img" aria-label="A step function F(theta) and its Gaussian-blurred smooth version J(theta)">
+          <rect class="sv-bg" width="760" height="290" rx="10"/>
+          <line class="sv-axis" x1="70" y1="230" x2="690" y2="230"/>
+          <line class="sv-axis" x1="70" y1="30" x2="70" y2="230"/>
+          <text class="fm sm" x="620" y="256">weight θ</text>
+          <text class="fm sm" x="14" y="44">return</text>
+          <text class="fm xs mid" x="70" y="246">0</text>
+          <text class="fm xs mid" x="220" y="246">1</text>
+          <text class="fm xs mid" x="370" y="246">2</text>
+          <text class="fm xs mid" x="520" y="246">3</text>
+          <text class="fm xs mid" x="670" y="246">4</text>
+          <text class="fm xs end" x="62" y="234">0</text>
+          <text class="fm xs end" x="62" y="54">10</text>
 
-          <!-- Raw Step Function F(theta) -->
-          <line x1="70" y1="228" x2="380" y2="228" stroke="#fb7185" stroke-width="4" />
-          <line x1="380" y1="228" x2="380" y2="60" stroke="#fb7185" stroke-width="2" stroke-dasharray="5,5" />
-          <line x1="380" y1="60" x2="680" y2="60" stroke="#fb7185" stroke-width="4" />
-          <text x="110" y="212" fill="#fb7185" font-family="sans-serif" font-size="13" font-weight="bold">Raw F(θ): Slope = 0 (Blind)</text>
-          <text x="480" y="48" fill="#fb7185" font-family="sans-serif" font-size="13" font-weight="bold">F(θ) = +10 (Slope = 0)</text>
+          <!-- raw step -->
+          <line class="sr w4" x1="70" y1="230" x2="370" y2="230"/>
+          <line class="sr w2 dash" x1="370" y1="230" x2="370" y2="50"/>
+          <line class="sr w4" x1="370" y1="50" x2="670" y2="50"/>
+          <text class="fr bd sm" x="90" y="214">Raw F(θ): slope = 0 (blind)</text>
+          <text class="fr bd sm" x="500" y="40">F(θ) = +10 (slope = 0)</text>
 
-          <!-- Gaussian-Blurred Objective E[F(theta + sigma*eps)] -->
-          <path d="M 70 228 C 220 228, 280 220, 380 144 C 480 68, 540 60, 680 60" fill="none" stroke="#34d399" stroke-width="4" />
-          <text x="405" y="155" fill="#34d399" font-family="sans-serif" font-size="14" font-weight="bold">Gaussian-Blurred Objective E[F(θ + σε)]</text>
-          <text x="405" y="175" fill="#cbd5e1" font-family="sans-serif" font-size="12">(Smooth &amp; Differentiable everywhere!)</text>
+          <!-- smoothed J, sigma = 0.5 : 10*Phi((θ-2)/0.5) -->
+          <polyline class="nofill sg w4" points="70,230 145,229.8 220,225.9 257.5,218 295,201.4 332.5,174.5 370,140 407.5,105.5 445,78.6 482.5,62 520,54.1 595,50.2 670,50"/>
+          <text class="fg bd" x="410" y="160">Gaussian-blurred J(θ) = 10·Φ((θ−2)/σ)</text>
+          <text class="sm" x="410" y="178">smooth &amp; differentiable everywhere (σ = 0.5)</text>
 
-          <!-- Sampled Cloud around theta = 1.5 -->
-          <circle cx="290" cy="228" r="7" fill="#fbbf24" />
-          <text x="255" y="252" fill="#fbbf24" font-family="sans-serif" font-size="12">Parent θ</text>
-          <circle cx="230" cy="228" r="5" fill="#38bdf8" />
-          <circle cx="330" cy="228" r="5" fill="#38bdf8" />
-          <circle cx="410" cy="60" r="6" fill="#34d399" />
-          <circle cx="445" cy="60" r="6" fill="#34d399" />
-          <text x="370" y="252" fill="#94a3b8" font-family="sans-serif" font-size="12">θ = 2.0</text>
+          <!-- tangent at θ = 1.5 : slope 4.84 -->
+          <line class="sa w3" x1="255" y1="224.6" x2="335" y2="178.2"/>
+          <text class="fa bd sm" x="115" y="195">slope ≈ 4.84</text>
+          <text class="fa xs" x="115" y="209">at θ = 1.5</text>
+
+          <!-- cloud -->
+          <circle class="fa" cx="295" cy="230" r="7"/>
+          <text class="fa bd sm mid" x="295" y="270">parent θ = 1.5</text>
+          <circle class="fb" cx="220" cy="230" r="5"/>
+          <circle class="fb" cx="257.5" cy="230" r="5"/>
+          <circle class="fb" cx="340" cy="230" r="5"/>
+          <circle class="fg" cx="400" cy="50" r="6"/>
+          <circle class="fg" cx="460" cy="50" r="6"/>
+          <line class="sg w1 dash faint" x1="400" y1="56" x2="400" y2="224"/>
+          <line class="sg w1 dash faint" x1="460" y1="56" x2="460" y2="224"/>
+          <text class="fm sm mid" x="370" y="270">cliff θ = 2</text>
         </svg>
         <div class="diagram-caption">
-          <strong>Figure 3.1 — How ES Smooths Step Functions via Gaussian Blur:</strong> Even when the parent $\theta$ sits on the flat bottom plateau where the local derivative is $0$, throwing a Gaussian cloud of offspring $\theta + \sigma\epsilon$ allows right-tail samples (green dots) to land on the $+10$ cliff. Averaging over the cloud turns the sharp cliff into a smooth ramp (green curve) with a positive gradient!
+          <strong>Figure 3.1 — How ES Smooths Step Functions via Gaussian Blur:</strong> The parent (amber) sits on the flat bottom plateau where the raw derivative is $0$. Right-tail offspring (green) cross the cliff and earn $+10$; left-tail offspring (blue) earn $0$. Averaging over the cloud converts the sharp cliff into the smooth green ramp, whose tangent at $\theta=1.5$ has slope $\approx 4.84$ (computed exactly above).
         </div>
+      </div>
+
+      <!-- ==================== INTERACTIVE LAB ==================== -->
+      <div class="widget" id="smooth-widget">
+        <div class="widget-title">
+          <span>Interactive Lab — Gaussian Smoothing of the Cliff</span>
+          <span class="blueprint-badge">F(θ) = 10 · 1[θ ≥ 2]</span>
+        </div>
+        <p style="margin-bottom:0.9rem;">Drag the parent $\theta$ and the noise $\sigma$. The green curve is the smoothed objective; the amber line is its exact tangent. Then compare the exact gradient with the <em>sampled</em> estimators that real ES uses: the plain estimator $\frac{1}{n\sigma}\sum F(\theta+\sigma\epsilon_i)\epsilon_i$ is noisy, the antithetic one (Module 7) is far steadier.</p>
+        <div class="control-row"><label for="sl-theta">Parent θ = <b id="v-theta">1.50</b></label><input id="sl-theta" type="range" min="0" max="4" step="0.01" value="1.5" /></div>
+        <div class="control-row"><label for="sl-sigma">Noise σ = <b id="v-sigma">0.50</b></label><input id="sl-sigma" type="range" min="0.05" max="1.5" step="0.01" value="0.5" /></div>
+        <div class="control-row"><label for="sl-n">Samples n = <b id="v-n">1000</b></label><input id="sl-n" type="range" min="10" max="20000" step="10" value="1000" /></div>
+
+        <svg id="lab-svg" class="fig" viewBox="0 0 760 260" role="img" aria-label="Interactive smoothing plot">
+          <rect class="sv-bg" width="760" height="260" rx="10"/>
+          <line class="sv-axis" x1="60" y1="220" x2="700" y2="220"/>
+          <line class="sv-axis" x1="60" y1="30" x2="60" y2="220"/>
+          <text class="fm xs mid" x="60" y="238">0</text><text class="fm xs mid" x="220" y="238">1</text><text class="fm xs mid" x="380" y="238">2</text><text class="fm xs mid" x="540" y="238">3</text><text class="fm xs mid" x="700" y="238">4</text>
+          <text class="fm xs end" x="52" y="224">0</text><text class="fm xs end" x="52" y="44">10</text>
+          <path class="nofill sr w2 dash" d="M60 220H380V40H700"/>
+          <path id="lab-curve" class="nofill sg w4" d="M60 220L700 40"/>
+          <line id="lab-tan" class="sa w3" x1="0" y1="0" x2="0" y2="0"/>
+          <circle id="lab-marker" class="fa" cx="300" cy="200" r="7"/>
+          <text class="fr xs" x="388" y="34">raw F(θ)</text>
+          <text class="fg xs" x="580" y="30">smoothed J_σ(θ)</text>
+        </svg>
+
+        <div class="readout-grid">
+          <div class="readout"><span>Raw F(θ) / raw slope</span><strong id="o-raw">0 / 0</strong></div>
+          <div class="readout"><span>Smoothed J_σ(θ)</span><strong id="o-j">—</strong></div>
+          <div class="readout"><span>Exact gradient ∇J_σ(θ)</span><strong id="o-g">—</strong></div>
+          <div class="readout warn"><span>Plain ES estimate (n samples)</span><strong id="o-plain">—</strong></div>
+          <div class="readout"><span>Antithetic ES estimate (n/2 pairs)</span><strong id="o-anti">—</strong></div>
+        </div>
+        <button class="btn" id="btn-resample" type="button">Resample ε</button>
       </div>
     </section>
 
@@ -454,11 +639,11 @@
     <section id="mod-4" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 04 • Probability Distributions</span>
-        <h2>Natural Evolution Strategies (NES) &amp; The Probability Cloud $p_\psi(\theta)$</h2>
+        <h2>Natural Evolution Strategies (NES) &amp; The Probability Cloud $p_\psi(\theta)$ <span class="paper-ref">Paper §2</span></h2>
       </div>
 
       <p>
-        Instead of optimizing a single point $\theta$ directly on a jagged landscape, <strong>Natural Evolution Strategies (NES)</strong> defines a probability distribution (a "probability cloud") over parameters, denoted $p_\psi(\theta)$, governed by distribution hyperparameters $\psi$ (such as the cloud's center $\mu$ and spread $\sigma$). Our goal is to adjust $\psi$ to maximize the average fitness of networks drawn from this cloud:
+        Instead of optimizing a single point $\theta$ on a jagged landscape, <strong>Natural Evolution Strategies (NES)</strong> maintain a probability distribution (a "probability cloud") $p_\psi(\theta)$ over parameters, governed by distribution parameters $\psi$ (such as the cloud's center and spread). The goal is to move $\psi$ so that networks drawn from the cloud do well on average:
       </p>
 
       <div class="formula-box">
@@ -467,29 +652,80 @@
 
       <h3>Why OpenAI Used an Isotropic Gaussian Instead of CMA-ES</h3>
       <p>
-        In Section 2 of the paper, the authors mention <strong>CMA-ES</strong> (Covariance Matrix Adaptation Evolution Strategy), the most famous classical ES algorithm, and explain why it only works in low-to-medium dimensions:
+        The paper notes that the most widely known ES, <strong>CMA-ES</strong> (Hansen &amp; Ostermeier, 2001), represents the population by a <em>full-covariance</em> multivariate Gaussian and "has been extremely successful in solving optimization problems in low to medium dimension." The version used by OpenAI instead belongs to NES and uses the simplest possible cloud. The standard scaling argument (our own reasoning; the paper does not spell it out) shows why that suits deep networks:
       </p>
+
+      <!-- SVG Diagram 4.1: Three covariance structures -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 262" role="img" aria-label="Isotropic, diagonal and full covariance Gaussian clouds in 2D">
+          <rect class="sv-bg" width="760" height="262" rx="10"/>
+          <rect class="sv-panel" x="15" y="15" width="230" height="190" rx="8"/>
+          <rect class="sv-panel" x="265" y="15" width="230" height="190" rx="8"/>
+          <rect class="sv-panel" x="515" y="15" width="230" height="190" rx="8"/>
+          <text class="fb bd mid" x="130" y="36">Isotropic Σ = σ²I</text>
+          <text class="fi bd mid" x="380" y="36">Diagonal Σ = diag(σ_k²)</text>
+          <text class="fr bd mid" x="630" y="36">Full covariance (CMA-ES)</text>
+
+          <!-- isotropic -->
+          <g class="nofill sb w1"><circle cx="130" cy="120" r="20"/><circle cx="130" cy="120" r="40"/><circle cx="130" cy="120" r="62"/></g>
+          <g class="fb"><circle cx="100" cy="140" r="3"/><circle cx="145" cy="85" r="3"/><circle cx="170" cy="130" r="3"/><circle cx="120" cy="115" r="3"/><circle cx="155" cy="160" r="3"/><circle cx="82" cy="100" r="3"/><circle cx="135" cy="145" r="3"/><circle cx="182" cy="100" r="3"/></g>
+          <circle class="fa" cx="130" cy="120" r="5"/>
+
+          <!-- diagonal -->
+          <g class="nofill si w1"><ellipse cx="380" cy="120" rx="30" ry="14"/><ellipse cx="380" cy="120" rx="60" ry="28"/><ellipse cx="380" cy="120" rx="95" ry="44"/></g>
+          <g class="fi"><circle cx="330" cy="130" r="3"/><circle cx="415" cy="105" r="3"/><circle cx="440" cy="128" r="3"/><circle cx="368" cy="112" r="3"/><circle cx="400" cy="150" r="3"/><circle cx="305" cy="108" r="3"/><circle cx="385" cy="138" r="3"/><circle cx="452" cy="115" r="3"/></g>
+          <circle class="fa" cx="380" cy="120" r="5"/>
+
+          <!-- full: rotated -->
+          <g class="nofill sr w1" transform="rotate(-35 630 120)"><ellipse cx="630" cy="120" rx="30" ry="12"/><ellipse cx="630" cy="120" rx="60" ry="24"/><ellipse cx="630" cy="120" rx="95" ry="38"/></g>
+          <g class="fr"><circle cx="590" cy="150" r="3"/><circle cx="672" cy="92" r="3"/><circle cx="650" cy="108" r="3"/><circle cx="612" cy="132" r="3"/><circle cx="700" cy="78" r="3"/><circle cx="565" cy="165" r="3"/><circle cx="640" cy="128" r="3"/><circle cx="668" cy="100" r="3"/></g>
+          <circle class="fa" cx="630" cy="120" r="5"/>
+
+          <text class="fb bd mid sm" x="130" y="226">1 number (here: fixed σ)</text>
+          <text class="mid xs" x="130" y="243">no storage, no matrix algebra</text>
+          <text class="fi bd mid sm" x="380" y="226">d numbers</text>
+          <text class="mid xs" x="380" y="243">per-weight scale, no correlations</text>
+          <text class="fr bd mid sm" x="630" y="226">d(d+1)/2 numbers, O(d³) factorization</text>
+          <text class="mid xs" x="630" y="243">d = 10⁶ → ≈ 5×10¹¹ entries ≈ 2 TB (float32)</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 4.1 — Three Ways to Shape the Cloud:</strong> Amber dots mark the center $\mu$. A full covariance captures correlations between every pair of weights but is hopeless beyond medium dimension. OpenAI ES uses the isotropic cloud on the left: the same spread $\sigma$ in every direction.
+        </div>
+      </div>
+
       <ul>
-        <li><strong>Full-Covariance Gaussian (CMA-ES):</strong> Stores a full $d \times d$ covariance matrix $\Sigma$ to capture correlations between every pair of weights. If a deep network has $d = 1,000,000$ weights, $\Sigma$ requires $d^2 = 10^{12}$ (one trillion) numbers—impossible to store or invert!</li>
-        <li><strong>Factored (Diagonal) Gaussian:</strong> Stores an independent variance $\sigma_k^2$ for each weight ($d$ parameters).</li>
-        <li><strong>Isotropic Multivariate Gaussian (OpenAI ES):</strong> Uses a single fixed scalar standard deviation $\sigma$ for all directions: $\Sigma = \sigma^2 I$. It requires <strong>zero covariance matrix storage</strong> and scales effortlessly to millions of neural network weights.</li>
+        <li><strong>Full-Covariance Gaussian (CMA-ES):</strong> stores a symmetric $d\times d$ matrix. For $d = 10^6$ weights that is roughly $5\times10^{11}$ unique entries (about 2 TB in float32), and updating it costs far more than $O(d^2)$ per generation.</li>
+        <li><strong>Factored (Diagonal) Gaussian:</strong> an independent variance $\sigma_k^2$ per weight: $d$ numbers.</li>
+        <li><strong>Isotropic Multivariate Gaussian (OpenAI ES):</strong> $\Sigma = \sigma^2 I$ with one <em>fixed</em> scalar $\sigma$. Nothing to store, nothing to adapt; scales to millions of weights. The paper adds that adapting $\sigma$ (as Wierstra et al., 2014 do) gave no observable benefit, so it is treated as a hyperparameter.</li>
       </ul>
 
-      <h3>Deconstructing the Multivariate Gaussian Formula &amp; What $(2\pi)^{d/2}$ Means</h3>
+      <div class="callout paper">
+        <span class="callout-title">One idea, four names</span>
+        <p>
+          The paper observes that for a factored Gaussian $p_\psi$ the gradient estimator is also known as <strong>simultaneous perturbation stochastic approximation</strong> (Spall, 1992), <strong>parameter-exploring policy gradients</strong> (Sehnke et al., 2010) and <strong>zero-order gradient estimation</strong> (Nesterov &amp; Spokoiny, 2011). When you meet these names in other papers, you are looking at the same estimator.
+        </p>
+      </div>
+
+      <h3>Deriving the Multivariate Gaussian Formula &amp; What $(2\pi)^{d/2}$ Means</h3>
       <p>
-        When our probability cloud $p_\psi(\theta)$ is a $d$-dimensional isotropic Gaussian with center $\mu$ and spread $\sigma$, its Probability Density Function (PDF) is:
+        With mean $\mu$ and covariance $\sigma^2 I$, the $d$ coordinates are independent $\mathcal{N}(\mu_k, \sigma^2)$ variables, so the density factorizes:
       </p>
 
-      <div class="formula-box">
-        $$p_\psi(\theta) = \frac{1}{(2\pi)^{d/2} \sigma^d} \exp\left( -\frac{\|\theta - \mu\|^2}{2\sigma^2} \right)$$
+      <div class="proof-step">
+        <span class="proof-step-badge">Step 1: One-dimensional normalization (the "polar-coordinates trick")</span>
+        <p>Let $I = \int_{-\infty}^{\infty} e^{-x^2/2}\,dx$. Square it and switch to polar coordinates $(r,\varphi)$ with $dx\,dy = r\,dr\,d\varphi$:</p>
+        $$I^2 = \iint e^{-(x^2+y^2)/2}\,dx\,dy = \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\, r\, dr\, d\varphi = 2\pi\,\Big[-e^{-r^2/2}\Big]_0^\infty = 2\pi \;\Longrightarrow\; I = \sqrt{2\pi}.$$
+      </div>
+      <div class="proof-step">
+        <span class="proof-step-badge">Step 2: Multiply $d$ independent coordinates</span>
+        $$p_\psi(\theta) = \prod_{k=1}^{d} \frac{1}{\sqrt{2\pi}\,\sigma}\exp\!\Big(-\frac{(\theta_k-\mu_k)^2}{2\sigma^2}\Big) = \frac{1}{(2\pi)^{d/2}\,\sigma^{d}}\exp\!\Big(-\frac{\|\theta-\mu\|^2}{2\sigma^2}\Big)$$
+        <p>The product of $d$ factors $(2\pi)^{-1/2}\sigma^{-1}$ is $(2\pi)^{-d/2}\sigma^{-d}$, and the exponents add into the squared Euclidean distance $\|\theta-\mu\|^2$.</p>
       </div>
 
       <div class="callout math-highlight">
-        <span class="callout-title">Where does $(2\pi)^{d/2}$ in the denominator come from?</span>
+        <span class="callout-title">Where does $(2\pi)^{d/2}\sigma^d$ in the denominator come from?</span>
         <p>
-          In probability theory, the total volume under any probability density curve across the entire space must equal exactly $1$ ($100\%$ total probability). Because the famous 1D Gaussian bell-curve integral evaluates to $\int_{-\infty}^{\infty} e^{-x^2/2} dx = \sqrt{2\pi} = (2\pi)^{1/2}$, multiplying $d$ independent dimensions together for a $d$-weight neural network raises this normalization constant to the power of $d$:
-          $$\underbrace{(2\pi)^{1/2} \times (2\pi)^{1/2} \times \dots \times (2\pi)^{1/2}}_{d \text{ dimensions}} = (2\pi)^{d/2}$$
-          Thus, $\frac{1}{(2\pi)^{d/2}\sigma^d}$ is simply the <strong>Normalization Constant</strong> that keeps total probability equal to $1$. Even better: when we take the derivative with respect to $\mu$, this entire constant disappears!
+          It is the <strong>normalization constant</strong> that makes the total probability equal to $1$: each dimension contributes $\int e^{-(x-\mu)^2/(2\sigma^2)}dx = \sqrt{2\pi}\,\sigma$, so $d$ dimensions contribute $(2\pi)^{d/2}\sigma^d$. Even better: it does not depend on $\mu$, so when we differentiate $\log p_\psi$ with respect to the center (Module 6) this whole constant vanishes.
         </p>
       </div>
     </section>
@@ -500,84 +736,89 @@
     <section id="mod-5" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 05 • The Master Derivation</span>
-        <h2>Step-by-Step Proof: The Score Function Estimator (Log-Derivative Trick)</h2>
+        <h2>Step-by-Step Proof: The Score Function Estimator (Log-Derivative Trick) <span class="paper-ref">Paper §2</span></h2>
       </div>
 
       <p>
-        In Paragraph 2 of Section 2, the paper presents the foundational equation of NES and REINFORCE:
+        The foundational equation of NES (and of REINFORCE, Williams 1992) in Section 2 of the paper is:
       </p>
       <div class="formula-box">
         $$\nabla_\psi \mathbb{E}_{\theta \sim p_\psi} F(\theta) = \mathbb{E}_{\theta \sim p_\psi} \Big\{ F(\theta) \, \nabla_\psi \log p_\psi(\theta) \Big\}$$
       </div>
 
       <div class="callout warning">
-        <span class="callout-title">Terminology Trap: Fitness $F(\theta)$ vs. The Statistical "Score Function" $\nabla_\psi \log p_\psi(\theta)$</span>
+        <span class="callout-title">Terminology Trap: Fitness $F(\theta)$ vs. the Statistical "Score Function" $\nabla_\psi \log p_\psi(\theta)$</span>
         <p>
-          Do not confuse "game score" with the statistical "Score Function"!
-          <br />• <strong>$F(\theta)$ is the Fitness / Episode Return:</strong> The actual game points or reward returned by the environment simulator.
-          <br />• <strong>$\nabla_\psi \log p_\psi(\theta)$ is called the "Score Function" in classical statistics:</strong> Long before video games existed, statisticians named the gradient of the log-likelihood ($\nabla_\psi \log p_\psi$) the <em>Score Function</em> because it measures how sensitive the probability distribution is to a small shift in $\psi$.
+          Do not confuse the "game score" with the statistical "score function"!
+          <br />• <strong>$F(\theta)$ is the Fitness / Episode Return:</strong> the points returned by the environment.
+          <br />• <strong>$\nabla_\psi \log p_\psi(\theta)$ is the "score function" of classical statistics:</strong> the gradient of the log-likelihood, which measures how sensitive the density is to a small shift in $\psi$.
         </p>
       </div>
 
-      <h3>How Did Both Sides of the Equation Become Equal? (Zero-Gap Proof)</h3>
+      <h3>How Do Both Sides Become Equal? (Zero-Gap Proof)</h3>
       <p>
-        Here is the complete 5-step mathematical derivation showing every single intermediate step, including how $p_\psi(\theta)$ splits into two parts:
+        Assumptions: $F$ is bounded (episode returns are) and $p_\psi(\theta) &gt; 0$ is smooth in $\psi$ (true for Gaussians), so differentiation and integration may be exchanged (dominated convergence) and $\log p_\psi$ is defined everywhere. Here is the complete 5-step derivation:
       </p>
 
       <div class="proof-step">
-        <span class="proof-step-badge">Step 1: Write Expectation as an Integral</span>
-        <p>
-          By definition of mathematical expectation for any continuous random variable $\theta$ with density $p_\psi(\theta)$, the average of $F(\theta)$ is the integral of $F(\theta)$ multiplied by $p_\psi(\theta)$ over the entire space:
-        </p>
+        <span class="proof-step-badge">Step 1: Write the expectation as an integral</span>
+        <p>By definition of expectation for a continuous variable with density $p_\psi$:</p>
         $$\nabla_\psi \mathbb{E}_{\theta \sim p_\psi} [F(\theta)] = \nabla_\psi \int F(\theta) \, p_\psi(\theta) \, d\theta$$
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">Step 2: Move Gradient Inside the Integral</span>
-        <p>
-          Because the derivative operator $\nabla_\psi$ differentiates with respect to the cloud parameters $\psi$, and the black-box fitness $F(\theta)$ does not depend on $\psi$, $\nabla_\psi$ passes straight through $F(\theta)$ and acts solely on $p_\psi(\theta)$:
-        </p>
+        <span class="proof-step-badge">Step 2: Move the gradient inside the integral</span>
+        <p>$\nabla_\psi$ differentiates with respect to the cloud parameters; the black-box fitness $F(\theta)$ does not depend on $\psi$, so the gradient passes straight through it and acts only on the density. <strong>We never differentiate $F$.</strong></p>
         $$= \int F(\theta) \, \nabla_\psi p_\psi(\theta) \, d\theta$$
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">Step 3: Apply the Log-Derivative Identity (Splitting $p_\psi(\theta)$ in Two!)</span>
-        <p>
-          From basic calculus, the derivative of the natural logarithm of any positive function is $\nabla_\psi \log p_\psi(\theta) = \frac{\nabla_\psi p_\psi(\theta)}{p_\psi(\theta)}$. Multiplying both sides by $p_\psi(\theta)$ gives the famous identity:
-        </p>
-        $$\nabla_\psi p_\psi(\theta) = \mathbf{p_\psi(\theta)} \cdot \nabla_\psi \log \mathbf{p_\psi(\theta)}$$
-        <p>
-          Notice what just happened: we replaced $\nabla_\psi p_\psi(\theta)$ with a product containing <strong>two appearances of $p_\psi(\theta)$</strong>—one trapped inside $\nabla_\psi \log p_\psi(\theta)$ and one standing outside as a multiplier!
-        </p>
+        <span class="proof-step-badge">Step 3: Apply the log-derivative identity (splitting $p_\psi$ in two)</span>
+        <p>By the chain rule for $\log$, $\nabla_\psi \log p_\psi(\theta) = \frac{\nabla_\psi p_\psi(\theta)}{p_\psi(\theta)}$. Multiplying both sides by $p_\psi(\theta)$ gives the identity</p>
+        $$\nabla_\psi p_\psi(\theta) = \mathbf{p_\psi(\theta)} \cdot \nabla_\psi \log p_\psi(\theta)$$
+        <p>One appearance of the density became two: one trapped inside the log-gradient and one standing outside as a multiplier. That outside copy is exactly what turns an integral back into an expectation.</p>
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">Step 4: Substitute Back into the Integral &amp; Regroup</span>
-        <p>
-          Substitute Step 3 into Step 2 and move the standalone $\mathbf{p_\psi(\theta)}$ to the right end of the integral next to $d\theta$:
-        </p>
-        $$= \int F(\theta) \, \Big[ \mathbf{p_\psi(\theta)} \, \nabla_\psi \log p_\psi(\theta) \Big] d\theta = \int \underbrace{\Big( F(\theta) \, \nabla_\psi \log p_\psi(\theta) \Big)}_{\text{Call this function } g(\theta)} \mathbf{p_\psi(\theta)} \, d\theta$$
+        <span class="proof-step-badge">Step 4: Substitute back &amp; regroup</span>
+        $$= \int F(\theta) \Big[ \mathbf{p_\psi(\theta)} \, \nabla_\psi \log p_\psi(\theta) \Big] d\theta = \int \underbrace{\Big( F(\theta) \, \nabla_\psi \log p_\psi(\theta) \Big)}_{g(\theta)} \mathbf{p_\psi(\theta)} \, d\theta$$
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">Step 5: Collapse the Integral Back into Expectation Notation $\mathbb{E}$</span>
-        <p>
-          In probability theory, $\int g(\theta) \, p_\psi(\theta) \, d\theta$ is the exact definition of $\mathbb{E}_{\theta \sim p_\psi}[g(\theta)]$. Replacing $g(\theta)$ with our parenthesized expression completes the proof:
-        </p>
+        <span class="proof-step-badge">Step 5: Collapse the integral back into $\mathbb{E}$</span>
+        <p>$\int g(\theta)\,p_\psi(\theta)\,d\theta$ is by definition $\mathbb{E}_{\theta\sim p_\psi}[g(\theta)]$, so</p>
         $$\nabla_\psi \mathbb{E}_{\theta \sim p_\psi} F(\theta) = \mathbb{E}_{\theta \sim p_\psi} \Big\{ F(\theta) \, \nabla_\psi \log p_\psi(\theta) \Big\}$$
+        <p class="qed">∎</p>
+      </div>
+
+      <h3>Why This Is Useful: An Unbiased Sampling Recipe</h3>
+      <p>
+        The right-hand side is an expectation over a distribution we can sample. Draw $\theta_1,\dots,\theta_n \sim p_\psi$, evaluate each $F(\theta_i)$ by running an episode, and average. The estimator $\hat g = \frac1n\sum_i F(\theta_i)\nabla_\psi\log p_\psi(\theta_i)$ is <strong>unbiased</strong> ($\mathbb{E}\hat g = \nabla_\psi \mathbb{E}F$) and converges to the true gradient as $n\to\infty$ by the law of large numbers. All it ever asks of the environment is the number $F(\theta_i)$.
+      </p>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Bonus lemma: the score function has zero mean (why baselines are free)</span>
+        $$\mathbb{E}_{\theta\sim p_\psi}\big[\nabla_\psi \log p_\psi(\theta)\big] = \int \nabla_\psi p_\psi(\theta)\,d\theta = \nabla_\psi \int p_\psi(\theta)\,d\theta = \nabla_\psi 1 = 0.$$
+        <p>Consequently, subtracting any constant $b$ from $F$ leaves the expectation unchanged: $\mathbb{E}[(F-b)\nabla_\psi\log p_\psi] = \mathbb{E}[F\nabla_\psi\log p_\psi]$. It can change the <em>variance</em> a lot. This is the origin of the paper's finite-difference form in Module 6 and of the antithetic and rank tricks in Module 7.</p>
       </div>
 
       <h3>Worked Numerical Example of the Score Function</h3>
       <p>
-        For a 1D Gaussian cloud with parameters $\psi = (\mu, \sigma)$, differentiating $\log p_\psi(\theta) = -\frac{1}{2}\ln(2\pi) - \ln\sigma - \frac{(\theta - \mu)^2}{2\sigma^2}$ with respect to the center $\mu$ gives:
-        $$\nabla_\mu \log p_\psi(\theta) = \frac{\theta - \mu}{\sigma^2}$$
-        Suppose our cloud starts at center $\mu_0 = 10$ with spread $\sigma_0 = 2$ and learning rate $\alpha = 0.1$. We draw two offspring:
+        For a 1D Gaussian cloud with $\psi = (\mu,\sigma)$, $\log p_\psi(\theta) = -\tfrac12\ln(2\pi) - \ln\sigma - \frac{(\theta - \mu)^2}{2\sigma^2}$. Differentiating with respect to the center gives
+        $$\nabla_\mu \log p_\psi(\theta) = \frac{\theta - \mu}{\sigma^2}.$$
+        Start at $\mu_0 = 10$, $\sigma = 2$, $\alpha = 0.1$, and draw two offspring:
       </p>
       <ul>
-        <li><strong>Offspring 1 ($\theta_1 = 8$, left of center):</strong> Gets a terrible return $F(\theta_1) = -5$. Its score function is $\frac{8 - 10}{2^2} = -0.5$. Multiplying return by score gives $(-5) \times (-0.5) = \mathbf{+2.5}$ (two negatives make a positive—pushing the cloud to the right, away from $\theta_1 = 8$!).</li>
-        <li><strong>Offspring 2 ($\theta_2 = 12$, right of center):</strong> Gets a great return $F(\theta_2) = +15$. Its score function is $\frac{12 - 10}{2^2} = +0.5$. Multiplying return by score gives $(+15) \times (+0.5) = \mathbf{+7.5}$ (pulling the cloud strongly to the right toward $\theta_2 = 12$!).</li>
-        <li><strong>Update:</strong> Average gradient $= \frac{2.5 + 7.5}{2} = +5.0 \implies \mu_1 = 10 + 0.1(5.0) = \mathbf{10.5}$. The cloud shifted toward higher reward without taking any derivative of $F$!</li>
+        <li><strong>Offspring 1 ($\theta_1 = 8$, left of center):</strong> terrible return $F = -5$. Score $= \frac{8-10}{4} = -0.5$. Product $(-5)(-0.5) = \mathbf{+2.5}$: two negatives make a positive, <em>pushing the cloud right, away from 8</em>.</li>
+        <li><strong>Offspring 2 ($\theta_2 = 12$, right of center):</strong> great return $F = +15$. Score $= +0.5$. Product $= \mathbf{+7.5}$: <em>pulling the cloud right toward 12</em>.</li>
+        <li><strong>Update:</strong> average $= (2.5+7.5)/2 = +5.0$, so $\mu_1 = 10 + 0.1\cdot 5.0 = \mathbf{10.5}$. The cloud moved toward higher reward without ever differentiating $F$.</li>
       </ul>
+      <div class="callout intuition">
+        <span class="callout-title">Why the baseline lemma matters in practice</span>
+        <p>
+          Suppose instead the two draws were $\theta = 8$ and $\theta = 13$ (scores $-0.5$ and $+0.75$, mean score $0.125$), and every return is shifted up by $100$. The true gradient is unchanged (zero-mean lemma), but this particular sample's estimate is polluted by $100 \times 0.125 = 12.5$ of pure noise. Keeping huge constant offsets out of the weights is precisely what antithetic sampling and centered ranks achieve.
+        </p>
+      </div>
     </section>
 
     <!-- ===================================================================== -->
@@ -586,36 +827,84 @@
     <section id="mod-6" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 06 • Algorithm 1 Derivation</span>
-        <h2>From General NES to Algorithm 1: How $\nabla_\theta \log p$ Becomes $\frac{\epsilon}{\sigma}$</h2>
+        <h2>From General NES to Algorithm 1: How $\nabla_\theta \log p$ Becomes $\frac{\epsilon}{\sigma}$ <span class="paper-ref">Paper §2, §3.2</span></h2>
       </div>
 
       <p>
-        In Paragraph 3 of Section 2, the authors fix the covariance to $\sigma^2 I$ and perform an important <strong>notation shift</strong>: instead of calling the cloud center $\psi$, they call the cloud center $\theta$ directly, and write each perturbed offspring as $\tilde{\theta} = \theta + \sigma\epsilon$, where $\epsilon \sim \mathcal{N}(0, I)$.
+        In the third paragraph of Section 2 the authors instantiate $p_\psi$ as an isotropic Gaussian "with mean $\psi$ and fixed covariance $\sigma^2 I$" and make a <strong>notation shift</strong>: since $\psi$ is just the mean, they name it $\theta$ directly and write each perturbed offspring as $\tilde\theta = \theta + \sigma\epsilon$ with $\epsilon \sim \mathcal{N}(0, I)$.
       </p>
 
       <div class="proof-step">
-        <span class="proof-step-badge">Proof: Why $\nabla_\theta \log p(\theta + \sigma\epsilon) = \frac{\epsilon}{\sigma}$</span>
-        <p>
-          1. Write the log-density of an offspring $\tilde{\theta} \sim \mathcal{N}(\theta, \sigma^2 I)$ around parent center $\theta$:
-          $$\log p(\tilde{\theta}; \theta) = -\frac{d}{2}\ln(2\pi) - d\ln(\sigma) - \frac{\|\tilde{\theta} - \theta\|^2}{2\sigma^2}$$
-          2. Differentiate with respect to the parent center $\theta$ (the first two terms are constant with respect to $\theta$ and vanish):
-          $$\nabla_\theta \log p(\tilde{\theta}; \theta) = -\frac{1}{2\sigma^2} \Big( -2(\tilde{\theta} - \theta) \Big) = \frac{\tilde{\theta} - \theta}{\sigma^2}$$
-          3. Since every offspring is generated as $\tilde{\theta} = \theta + \sigma\epsilon$, the difference from the parent is $\tilde{\theta} - \theta = \sigma\epsilon$. Substitute $\sigma\epsilon$ into the numerator:
-          $$\nabla_\theta \log p(\theta + \sigma\epsilon) = \frac{\sigma\epsilon}{\sigma^2} = \frac{\epsilon}{\sigma}$$
-        </p>
+        <span class="proof-step-badge">Step 1: Change of variables</span>
+        <p>If $\tilde\theta \sim \mathcal{N}(\theta, \sigma^2 I)$ then $\epsilon = (\tilde\theta-\theta)/\sigma \sim \mathcal{N}(0,I)$, hence
+        $$\mathbb{E}_{\tilde\theta \sim p_\psi}F(\tilde\theta) = \mathbb{E}_{\epsilon\sim\mathcal{N}(0,I)}F(\theta+\sigma\epsilon).$$
+        The objective is a function of the mean $\theta$ alone: the "Gaussian-blurred" $J_\sigma(\theta)$ of Module 3.</p>
+      </div>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Step 2: Score function of the offspring density with respect to the mean</span>
+        <p>Write the log-density of an offspring around parent center $\theta$:
+        $$\log p(\tilde{\theta}; \theta) = -\frac{d}{2}\ln(2\pi) - d\ln\sigma - \frac{\|\tilde{\theta} - \theta\|^2}{2\sigma^2}.$$
+        The first two terms do not depend on $\theta$ and vanish under $\nabla_\theta$. For the last, $\nabla_\theta\|\tilde\theta-\theta\|^2 = -2(\tilde\theta-\theta)$, so
+        $$\nabla_\theta \log p(\tilde{\theta}; \theta) = -\frac{1}{2\sigma^2}\Big(-2(\tilde{\theta} - \theta)\Big) = \frac{\tilde{\theta} - \theta}{\sigma^2}.$$</p>
+      </div>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Step 3: Substitute the reparameterization $\tilde\theta - \theta = \sigma\epsilon$</span>
+        $$\nabla_\theta \log p(\theta + \sigma\epsilon;\theta) = \frac{\sigma\epsilon}{\sigma^2} = \frac{\epsilon}{\sigma}$$
+        <p>The score is simply the noise itself divided by $\sigma$. In Section 3 notation with $\xi = \sigma\epsilon$ this is $\xi/\sigma^2 = \epsilon/\sigma$. <strong>No backpropagation anywhere</strong>: the "gradient of the log-probability" is a vector we already generated.</p>
+      </div>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Step 4: Plug into the score-function estimator</span>
+        $$\nabla_\theta \mathbb{E}_{\epsilon \sim \mathcal{N}(0, I)} F(\theta + \sigma\epsilon) = \mathbb{E}_{\epsilon}\Big\{ F(\theta + \sigma\epsilon) \cdot \frac{\epsilon}{\sigma} \Big\} = \frac{1}{\sigma} \mathbb{E}_{\epsilon \sim \mathcal{N}(0, I)} \Big\{ F(\theta + \sigma\epsilon) \, \epsilon \Big\}$$
+        <p class="qed">∎ (the second key equation of the paper)</p>
       </div>
 
       <p>
-        Plugging $\frac{\epsilon}{\sigma}$ into our Score Function Estimator immediately yields the second key equation of the paper:
+        Replacing the expectation with an average over $n$ sampled offspring, and taking a gradient <em>ascent</em> step with learning rate $\alpha$, yields <strong>Algorithm 1</strong>:
       </p>
       <div class="formula-box">
-        $$\nabla_\theta \mathbb{E}_{\epsilon \sim \mathcal{N}(0, I)} F(\theta + \sigma\epsilon) = \frac{1}{\sigma} \mathbb{E}_{\epsilon \sim \mathcal{N}(0, I)} \Big\{ F(\theta + \sigma\epsilon) \, \epsilon \Big\}$$
+        <span class="formula-label">Algorithm 1 — Evolution Strategies</span>
+        $$\theta_{t+1} \leftarrow \theta_t + \alpha \frac{1}{n\sigma} \sum_{i=1}^n F(\theta_t + \sigma\epsilon_i) \, \epsilon_i, \qquad \epsilon_i \sim \mathcal{N}(0,I)$$
+      </div>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Algorithm 1 line</th><th>Operation</th><th>Cost</th></tr></thead>
+          <tbody>
+            <tr><td>3: Sample $\epsilon_1,\dots,\epsilon_n \sim \mathcal{N}(0,I)$</td><td>Draw $n$ noise vectors in $\mathbb{R}^d$ (in practice: slices of a pre-generated table)</td><td>$O(nd)$, or $O(n)$ with indices</td></tr>
+            <tr><td>4: Compute $F_i = F(\theta_t+\sigma\epsilon_i)$</td><td>Run one full episode per offspring (forward passes only)</td><td>Dominates; embarrassingly parallel</td></tr>
+            <tr><td>5: $\theta_{t+1}\leftarrow\theta_t+\alpha\frac{1}{n\sigma}\sum F_i\epsilon_i$</td><td>Weighted sum of noise vectors</td><td>$O(nd)$</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>One Full Iteration by Hand</h3>
+      <p>
+        Take $F(\theta) = -(\theta-3)^2$ (optimum at $3$), $\theta_0 = 0$, $\sigma = 0.5$, $\alpha = 0.1$, $n = 4$, and suppose the draws are $\epsilon = (1.0,\,-0.5,\,2.0,\,-1.5)$.
+      </p>
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>$i$</th><th>$\epsilon_i$</th><th>$\theta_0+\sigma\epsilon_i$</th><th>$F_i$</th><th>$F_i\,\epsilon_i$</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td class="num">1.0</td><td class="num">0.50</td><td class="num">−6.25</td><td class="num">−6.2500</td></tr>
+            <tr><td>2</td><td class="num">−0.5</td><td class="num">−0.25</td><td class="num">−10.5625</td><td class="num">+5.2813</td></tr>
+            <tr><td>3</td><td class="num">2.0</td><td class="num">1.00</td><td class="num">−4.00</td><td class="num">−8.0000</td></tr>
+            <tr><td>4</td><td class="num">−1.5</td><td class="num">−0.75</td><td class="num">−14.0625</td><td class="num">+21.0938</td></tr>
+          </tbody>
+        </table>
       </div>
       <p>
-        Approximating the expectation $\mathbb{E}$ by averaging over $n$ sampled offspring ($\frac{1}{n}\sum_{i=1}^n$) produces <strong>Algorithm 1</strong>:
+        $\sum_i F_i\epsilon_i = 12.125$, so $\theta_1 = 0 + \frac{0.1}{4\cdot 0.5}\times 12.125 = \mathbf{0.606}$. The parent moved toward the optimum at $3$. For comparison, the true gradient of the blurred objective at $0$ is $-2(0-3) = 6$, so the ideal step would be $0.6$: even four samples got within about one percent. <em>(Do not expect this luck every time; that is what Module 7 addresses.)</em>
       </p>
-      <div class="formula-box">
-        $$\theta_{t+1} \leftarrow \theta_t + \alpha \frac{1}{n\sigma} \sum_{i=1}^n F(\theta_t + \sigma\epsilon_i) \, \epsilon_i$$
+
+      <h3>The Finite-Difference View and the Free Baseline <span class="paper-ref">Paper §3.2</span></h3>
+      <div class="proof-step">
+        <span class="proof-step-badge">Derivation: ES is randomized finite differences</span>
+        <p>Because $\mathbb{E}[\epsilon] = 0$, we have $\mathbb{E}\{F(\theta)\,\epsilon/\sigma\} = F(\theta)\,\mathbb{E}[\epsilon]/\sigma = 0$. Subtracting this zero-mean term (the zero-mean lemma of Module 5 in action):</p>
+        $$\nabla_\theta J_\sigma(\theta) = \mathbb{E}_{\epsilon}\Big\{ \frac{F(\theta + \sigma\epsilon)\,\epsilon}{\sigma} \Big\} = \mathbb{E}_{\epsilon}\Big\{ \frac{\big(F(\theta + \sigma\epsilon) - F(\theta)\big)\,\epsilon}{\sigma} \Big\}$$
+        <p>The bracket is a one-sided finite-difference quotient of $F$ in the random direction $\epsilon$. As $\sigma\to 0$ and $F$ smooth, $(F(\theta+\sigma\epsilon)-F(\theta))/\sigma \to \epsilon^\top\nabla F(\theta)$, so the estimator becomes $\epsilon\epsilon^\top\nabla F$, whose mean is $\nabla F$ because $\mathbb{E}[\epsilon\epsilon^\top]=I$.</p>
       </div>
     </section>
 
@@ -625,70 +914,276 @@
     <section id="mod-7" class="module-section">
       <div class="module-header">
         <span class="module-tag">Module 07 • Section 2.1 &amp; 2.2 Deep Dive</span>
-        <h2>Scaling to 1,440 CPUs: Algorithm 2 &amp; Six Engineering Pillars</h2>
+        <h2>Scaling to 1,440 CPUs: Algorithm 2 &amp; Six Engineering Pillars <span class="paper-ref">Paper §2.1–§2.2</span></h2>
       </div>
 
-      <h3>Why Doesn't Creating a Cloud of Networks Explode Computation?</h3>
+      <h3>Why Doesn't a Cloud of Networks Explode Computation?</h3>
       <p>
-        Evaluating hundreds of perturbed networks requires roughly $3\times$ to $10\times$ more environment frames than traditional RL, yet OpenAI ES finishes training <strong>over $10\times$ faster in wall-clock time</strong> (solving 3D Humanoid in 10 minutes vs. 1 day) for three reasons:
+        ES needs more environment frames than classic RL (the paper reports roughly $3\times$ to $10\times$ more data than A3C on Atari, and at most $10\times$ more than TRPO on MuJoCo), yet it finishes far sooner in wall-clock time (3D Humanoid in about 10 minutes versus about a day for RL on modern hardware). Section 2.1 gives three reasons it is "well suited to be scaled up to many parallel workers":
       </p>
       <ol>
-        <li><strong>Zero Backpropagation &amp; No Value Network ($\sim 3\times$ Cheaper per Frame):</strong> Offspring only run the forward pass (`requires_grad = False`), cutting per-frame compute and memory by roughly two-thirds.</li>
-        <li><strong>No Sequential Value-Function Bottleneck:</strong> Standard Actor-Critic RL is inherently sequential because the value function must repeatedly catch up every time the policy shifts. ES has no value function at all.</li>
-        <li><strong>Shared Random Seeds (Algorithm 2 — Ultra-Low Bandwidth):</strong> If all CPU workers initialize an identical Gaussian noise table in RAM using a known random seed at the start of training, workers <strong>never transmit million-parameter gradient vectors over the network</strong>. Worker $i$ only broadcasts two numbers after an episode: its noise table index (`idx`) and its scalar return ($F_i$)! Every worker then reconstructs $\epsilon_j$ locally and performs the exact same update.</li>
+        <li><strong>It operates on complete episodes</strong>, so workers communicate only once per generation, not once per time step.</li>
+        <li><strong>The only information a worker shares is a scalar return</strong> (plus the identity of the noise it used). If random seeds are synchronized before optimization, each worker knows which perturbations the others used, so a single scalar per worker is enough to agree on the update. Policy-gradient methods must communicate entire gradients.</li>
+        <li><strong>No value function.</strong> RL with value estimation is inherently sequential: every time the policy changes significantly, the value function needs several iterations to catch up. ES has no value function to catch up.</li>
       </ol>
+      <p>
+        On top of that, skipping backpropagation (and the value network) reduces the required computation per episode by roughly a factor of three ("about two thirds", Section 3.3), which is why 1 billion ES frames cost about as much network computation as A3C's 320 million (Section 4.2).
+      </p>
 
-      <h3>The 6 Essential Engineering Tricks in Sections 2.1 &amp; 2.2</h3>
+      <!-- SVG Diagram 7.1: Seed synchronization -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 340" role="img" aria-label="Parallel workers share a noise table, broadcast only scalar returns and indices, and reconstruct all noise vectors locally">
+          <defs>
+            <marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--accent-blue)"/></marker>
+            <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--accent-emerald)"/></marker>
+            <marker id="arrM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--text-muted)"/></marker>
+          </defs>
+          <rect class="sv-bg" width="760" height="340" rx="10"/>
+
+          <rect class="fi-d si w2" x="60" y="20" width="640" height="34" rx="6"/>
+          <text class="fi bd mid" x="380" y="42">Shared Gaussian noise table — identical on every worker (built from a common seed at startup)</text>
+
+          <line class="sx w1 faint" x1="160" y1="54" x2="160" y2="104" marker-end="url(#arrM)"/>
+          <line class="sx w1 faint" x1="380" y1="54" x2="380" y2="104" marker-end="url(#arrM)"/>
+          <line class="sx w1 faint" x1="600" y1="54" x2="600" y2="104" marker-end="url(#arrM)"/>
+          <text class="xs fm" x="168" y="84">read-only slice</text>
+          <text class="xs fm" x="388" y="84">noise[idx : idx+d]</text>
+          <text class="xs fm" x="608" y="84">no transmission</text>
+
+          <rect class="fb-d sb w2" x="60" y="108" width="200" height="76" rx="8"/>
+          <rect class="fb-d sb w2" x="280" y="108" width="200" height="76" rx="8"/>
+          <rect class="fb-d sb w2" x="500" y="108" width="200" height="76" rx="8"/>
+          <text class="fb bd mid" x="160" y="130">Worker 1</text>
+          <text class="fb bd mid" x="380" y="130">Worker 2</text>
+          <text class="fb bd mid" x="600" y="130">Worker n</text>
+          <text class="mid sm" x="160" y="150">draw idx_1 → ε_1</text>
+          <text class="mid sm" x="380" y="150">draw idx_2 → ε_2</text>
+          <text class="mid sm" x="600" y="150">draw idx_n → ε_n</text>
+          <text class="mid sm" x="160" y="170">F_1 = F(θ_t + σε_1)</text>
+          <text class="mid sm" x="380" y="170">F_2 = F(θ_t + σε_2)</text>
+          <text class="mid sm" x="600" y="170">F_n = F(θ_t + σε_n)</text>
+          <text class="fm bd lg mid" x="490" y="150">· · ·</text>
+
+          <line class="sa w2" x1="140" y1="184" x2="140" y2="226" marker-end="url(#arrB)"/>
+          <line class="sa w2" x1="360" y1="184" x2="360" y2="226" marker-end="url(#arrB)"/>
+          <line class="sa w2" x1="580" y1="184" x2="580" y2="226" marker-end="url(#arrB)"/>
+          <line class="sg w2" x1="180" y1="226" x2="180" y2="184" marker-end="url(#arrG)"/>
+          <line class="sg w2" x1="400" y1="226" x2="400" y2="184" marker-end="url(#arrG)"/>
+          <line class="sg w2" x1="620" y1="226" x2="620" y2="184" marker-end="url(#arrG)"/>
+
+          <rect class="fa-d sa w2" x="60" y="226" width="640" height="28" rx="6"/>
+          <text class="fa bd mid" x="380" y="245">All-gather of scalars: every worker sends (idx_i, F_i) ≈ 8 bytes and receives all n pairs</text>
+
+          <rect class="fg-d sg w2" x="60" y="274" width="640" height="52" rx="8"/>
+          <text class="fg bd mid" x="380" y="294">Every worker rebuilds ε_j for j = 1…n from the shared table, then applies the SAME update</text>
+          <text class="mid sm" x="380" y="314">θ_{t+1} = θ_t + α/(nσ) · Σ_j F_j ε_j  — no weights or gradients ever cross the network</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 7.1 — Algorithm 2: Shared Random Seeds:</strong> Blue arrows carry two numbers per worker; green arrows return the full list of $n$ scalar pairs. Because every worker holds the same noise table, "which perturbation did worker $j$ use?" is answered by a single index. Workers apply identical updates, so their parameter copies never diverge.
+        </div>
+      </div>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <caption>Illustrative bandwidth per generation for $d = 10^6$ float32 parameters and $n = 1{,}440$ workers (our arithmetic; the paper states the qualitative conclusion).</caption>
+          <thead><tr><th>Scheme</th><th>Per-worker payload</th><th>Total data collected from $n$ workers</th></tr></thead>
+          <tbody>
+            <tr><td>Policy-gradient style (ship a gradient)</td><td class="num">$d\times 4$ B $= 4$ MB</td><td class="num">$1440 \times 4$ MB $\approx 5.8$ GB</td></tr>
+            <tr><td><strong>ES with shared seeds (ship return + index)</strong></td><td class="num">$\approx 8$ B</td><td class="num">$1440\times 8$ B $\approx 11.5$ kB</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Algorithm 2 — Line by Line</h4>
+      <div class="formula-box">
+        <span class="formula-label">Algorithm 2 — Parallelized Evolution Strategies</span>
+        $$\underbrace{\epsilon_i \sim \mathcal{N}(0,I),\; F_i = F(\theta_t+\sigma\epsilon_i)}_{\text{lines 4–7: each worker, independently}} \;\xrightarrow{\;\text{line 8: send scalars}\;}\; \underbrace{\text{reconstruct } \epsilon_j\ (j=1..n)}_{\text{line 10: known seeds}} \;\to\; \underbrace{\theta_{t+1}\leftarrow\theta_t+\alpha\tfrac{1}{n\sigma}\textstyle\sum_{j}F_j\epsilon_j}_{\text{line 11}}$$
+      </div>
+      <p>
+        The paper reports that with this strategy the second part of Algorithm 2 (lines 9–12: reconstruction and update) "only takes up a small fraction of total time" even with up to 1,440 workers.
+      </p>
+
+      <h3>The 6 Essential Engineering Pillars of Sections 2.1 &amp; 2.2</h3>
 
       <div class="proof-step">
-        <span class="proof-step-badge">1. Pre-Allocated Noise Block &amp; Mixture of Gaussians</span>
+        <span class="proof-step-badge">Pillar 1: Pre-Allocated Noise Block, Mixture of Gaussians &amp; Pure Finite Differences</span>
         <p>
-          Generating millions of Gaussian random numbers every generation is slow. Instead, workers allocate one fixed array of $\sim 30,000,000$ Gaussian floats at startup and slice random contiguous chunks <code>noise[idx : idx + d]</code>. For giant networks, workers can perturb only a subset of coordinates (turning $p_\psi$ into a <em>Mixture of Gaussians</em>, or at the single-coordinate extreme, <em>Pure Finite Differences</em>) without changing the update equation.
+          Generating $d$ fresh Gaussians per offspring per generation is slow. Instead each worker instantiates one large block of Gaussian noise at start-up and perturbs its parameters by adding a randomly indexed slice <code>noise[idx : idx + d]</code> each iteration. As the paper candidly notes, "this means that the perturbations are not strictly independent across iterations", but it did not turn out to be a problem in practice. (The exact table size is an implementation detail; the paper does not specify it.)
+        </p>
+        <p>
+          For very many workers or very large networks, each worker may perturb only a random <em>subset</em> $S$ of the coordinates. Then $p_\psi$ becomes a <em>mixture of Gaussians</em> and "the update equations remain unchanged". At the extreme, one coordinate $k$ per worker gives
+          $$\frac{\partial F}{\partial \theta_k} \approx \frac{F(\theta+\sigma e_k) - F(\theta-\sigma e_k)}{2\sigma},$$
+          i.e. <strong>pure finite differences</strong>.
         </p>
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">2. Antithetic (Mirrored) Sampling: Why Pairs $(+\epsilon, -\epsilon)$ Cancel Variance</span>
+        <span class="proof-step-badge">Pillar 2: Antithetic (Mirrored) Sampling — Why the Pair $(+\epsilon, -\epsilon)$ Cancels Variance</span>
         <p>
-          For every noise vector $+\epsilon$, we also evaluate $-\epsilon$. By a first-order Taylor expansion $F(\theta \pm \sigma\epsilon) \approx F(\theta) \pm \sigma \epsilon^T \nabla F(\theta)$, subtracting the pair eliminates the noisy baseline term $F(\theta)\epsilon$:
-          $$F(\theta + \sigma\epsilon)\epsilon + F(\theta - \sigma\epsilon)(-\epsilon) \approx \Big(F(\theta) + \sigma\epsilon^T\nabla F(\theta)\Big)\epsilon - \Big(F(\theta) - \sigma\epsilon^T\nabla F(\theta)\Big)\epsilon = 2\sigma (\epsilon^T\nabla F(\theta))\epsilon$$
+          To reduce variance the paper evaluates pairs of perturbations $\epsilon, -\epsilon$ (Geweke 1988; "mirrored sampling" in the ES literature). Take the single-sample estimator and expand $F$ to first order, $F(\theta\pm\sigma\epsilon) = F(\theta) \pm \sigma\,\epsilon^\top\nabla F(\theta) + O(\sigma^2)$:
+        </p>
+        $$\hat g_{\text{plain}} = \frac{F(\theta+\sigma\epsilon)\,\epsilon}{\sigma} = \underbrace{\frac{F(\theta)}{\sigma}\epsilon}_{\text{zero-mean, variance}\,\propto F(\theta)^2/\sigma^2} + \underbrace{(\epsilon\epsilon^\top)\nabla F(\theta)}_{\text{useful signal}} + O(\sigma)$$
+        <p>The first term is pure noise and <em>explodes</em> as $\sigma\to 0$ or when returns have a large offset. Now pair the sample with its mirror image: since $(-\epsilon)$ flips the sign of the weight,</p>
+        $$F(\theta+\sigma\epsilon)\,\epsilon + F(\theta-\sigma\epsilon)(-\epsilon) = \big(F(\theta+\sigma\epsilon)-F(\theta-\sigma\epsilon)\big)\epsilon \;\approx\; 2\sigma\,(\epsilon^\top\nabla F(\theta))\,\epsilon.$$
+        <p>The baseline $F(\theta)\epsilon$ cancels <em>exactly</em>, and the even-order Taylor terms cancel too (the remainder is $O(\sigma^2)$). Dividing by $2\sigma$ gives $\hat g_{\text{anti}} = (\epsilon\epsilon^\top)\nabla F + O(\sigma^2)$, still unbiased for $\nabla F$ since $\mathbb{E}[\epsilon\epsilon^\top] = I$.</p>
+        <p><strong>Numerical illustration.</strong> Let $F(\theta) = 100 + 2\theta$ (true gradient $2$), $\theta = 0$, $\sigma = 0.1$, $\epsilon = 1.5$. Then $F^+ = 100.3$, $F^- = 99.7$. The plain single-sample estimate is $100.3\times 1.5/0.1 = \mathbf{1504.5}$. The antithetic estimate is $(100.3-99.7)\times 1.5/(2\times 0.1) = \mathbf{4.5}$ (which equals $\epsilon^2\cdot 2$; averaging over $\epsilon$ gives exactly $2$).</p>
+      </div>
+
+      <!-- SVG Diagram 7.2 antithetic geometry -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 250" role="img" aria-label="Antithetic pair: the common baseline cancels and only the slope term remains">
+          <rect class="sv-bg" width="760" height="250" rx="10"/>
+          <line class="sv-axis" x1="60" y1="215" x2="560" y2="215"/>
+          <line class="sv-axis" x1="60" y1="30" x2="60" y2="215"/>
+          <text class="fm sm" x="520" y="236">weight θ</text>
+          <text class="fm sm" x="14" y="44">F</text>
+          <line class="sx w2 dash" x1="70" y1="130" x2="550" y2="130"/>
+          <text class="fm xs" x="72" y="122">baseline F(θ) — same for both mirrors</text>
+          <line class="sb w3" x1="200" y1="175" x2="540" y2="62"/>
+          <circle class="fi" cx="380" cy="130" r="7"/>
+          <text class="fi bd sm mid" x="380" y="152">θ</text>
+          <circle class="fr" cx="290" cy="160" r="7"/>
+          <circle class="fg" cx="470" cy="100" r="7"/>
+          <text class="fr bd sm mid" x="290" y="182">θ − σε</text>
+          <text class="fg bd sm mid" x="470" y="86">θ + σε</text>
+          <line class="sg w3" x1="496" y1="130" x2="496" y2="100"/>
+          <text class="fg xs" x="502" y="118">+σεᵀ∇F</text>
+          <line class="sr w3" x1="264" y1="130" x2="264" y2="160"/>
+          <text class="fr xs end" x="258" y="150">−σεᵀ∇F</text>
+          <text class="fw bd" x="580" y="80">Pair contribution</text>
+          <text class="sm" x="580" y="102">F⁺·ε + F⁻·(−ε) = (F⁺ − F⁻)·ε</text>
+          <text class="sm" x="580" y="122">baseline: F(θ)ε − F(θ)ε = 0</text>
+          <text class="fg bd sm" x="580" y="146">≈ 2σ (εᵀ∇F) ε</text>
+          <text class="sm" x="580" y="166">→ only slope information survives</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 7.2 — Mirrored Samples Cancel the Baseline:</strong> The two mirror points sit on opposite sides of the same horizontal baseline $F(\theta)$. Subtracting their returns removes the baseline (the variance-heavy part) and keeps the slope term.
+        </div>
+      </div>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Pillar 3: Fitness Shaping (Centered Rank Transformation)</span>
+        <p>
+          Raw returns $F_i$ can contain extreme outliers that dominate the weighted sum and push ES into local optima early. Following Wierstra et al. (2014), the paper applies a rank transformation to the returns before every update. Sort the $n$ returns, let $\operatorname{rank}(F_i)\in\{0,1,\dots,n-1\}$ (0 = worst), and set
+        </p>
+        $$u_i = \frac{\operatorname{rank}(F_i)}{n-1} - \frac{1}{2} \in \Big[-\tfrac12, +\tfrac12\Big], \qquad \theta_{t+1} \leftarrow \theta_t + \frac{\alpha}{n\sigma}\sum_{i=1}^{n} u_i\,\epsilon_i.$$
+        <p><strong>Three properties, each provable in one line:</strong> (i) <em>Zero sum:</em> $\sum_i u_i = \frac{1}{n-1}\cdot\frac{n(n-1)}{2} - \frac{n}{2} = 0$, so the weights act as a built-in baseline (Module 5's lemma). (ii) <em>Bounded:</em> $|u_i|\le\frac12$, so no single offspring can pull the parent by more than $\frac12\|\epsilon_i\|$. (iii) <em>Invariant</em> to any strictly increasing transformation of the returns (shifts, rescalings, outliers).</p>
+        <p><strong>Worked example.</strong> Six offspring returned $12, 15, 9, 14, 11, 480$. Raw weights would let the lucky $480$ dominate the update. Ranks: $9\to0,\ 11\to1,\ 12\to2,\ 14\to3,\ 15\to4,\ 480\to5$, so $u = (-0.1,\ +0.3,\ -0.5,\ +0.1,\ -0.3,\ +0.5)$. The outlier gets the same maximum weight $+0.5$ it would have if it had scored only $16$.</p>
+      </div>
+
+      <!-- SVG Diagram 7.3 rank shaping -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 240" role="img" aria-label="Raw returns dominated by an outlier versus centered rank weights">
+          <rect class="sv-bg" width="760" height="240" rx="10"/>
+          <text class="fr bd" x="40" y="26">Raw returns F_i: one outlier dominates</text>
+          <line class="sv-axis" x1="40" y1="190" x2="340" y2="190"/>
+          <rect class="fb" x="55" y="187" width="30" height="3"/><rect class="fb" x="105" y="186.3" width="30" height="3.7"/><rect class="fb" x="155" y="187.8" width="30" height="2.2"/><rect class="fb" x="205" y="186.5" width="30" height="3.5"/><rect class="fb" x="255" y="187.3" width="30" height="2.7"/>
+          <rect class="fr" x="305" y="70" width="30" height="120"/>
+          <text class="xs mid" x="70" y="182">12</text><text class="xs mid" x="120" y="181">15</text><text class="xs mid" x="170" y="182">9</text><text class="xs mid" x="220" y="181">14</text><text class="xs mid" x="270" y="182">11</text><text class="fr bd xs mid" x="320" y="64">480</text>
+          <text class="fm xs mid" x="70" y="206">1</text><text class="fm xs mid" x="120" y="206">2</text><text class="fm xs mid" x="170" y="206">3</text><text class="fm xs mid" x="220" y="206">4</text><text class="fm xs mid" x="270" y="206">5</text><text class="fm xs mid" x="320" y="206">6</text>
+
+          <text class="fg bd" x="410" y="26">Centered ranks u_i ∈ [−0.5, +0.5]: bounded, zero-sum</text>
+          <line class="sv-axis" x1="410" y1="130" x2="720" y2="130"/>
+          <rect class="fr" x="425" y="130" width="30" height="10"/>
+          <rect class="fg" x="475" y="100" width="30" height="30"/>
+          <rect class="fr" x="525" y="130" width="30" height="50"/>
+          <rect class="fg" x="575" y="120" width="30" height="10"/>
+          <rect class="fr" x="625" y="130" width="30" height="30"/>
+          <rect class="fg" x="675" y="80" width="30" height="50"/>
+          <text class="xs mid" x="440" y="154">−0.1</text><text class="xs mid" x="490" y="94">+0.3</text><text class="xs mid" x="540" y="194">−0.5</text><text class="xs mid" x="590" y="114">+0.1</text><text class="xs mid" x="640" y="174">−0.3</text><text class="xs mid" x="690" y="74">+0.5</text>
+          <text class="fm xs mid" x="440" y="222">1</text><text class="fm xs mid" x="490" y="222">2</text><text class="fm xs mid" x="540" y="222">3</text><text class="fm xs mid" x="590" y="222">4</text><text class="fm xs mid" x="640" y="222">5</text><text class="fm xs mid" x="690" y="222">6</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 7.3 — Fitness Shaping:</strong> Left: raw returns $12,15,9,14,11,480$ (bars to scale; the first five are almost invisible next to the outlier). Right: the same six offspring after the centered-rank transform; the weights are bounded and sum to zero. Offspring below the median get <em>negative</em> weights and repel the parent.
+        </div>
+      </div>
+
+      <div class="proof-step">
+        <span class="proof-step-badge">Pillar 4: Fixed $\sigma$ + Weight Decay (L2 Regularization)</span>
+        <p>
+          The paper applies weight decay "to prevent the parameters from growing very large compared to the perturbations", and treats $\sigma$ as a fixed hyperparameter (adapting it gave no benefit). The reason is relative scale: each coordinate is perturbed by an amount of order $\sigma$, so the signal-to-noise ratio of coordinate $k$ is $|\theta_k|/\sigma$. If a weight drifts to $1000$ while $\sigma$ is a typical value such as $0.02$, a perturbation changes it by only $2\times10^{-3}\%$, and the offspring become indistinguishable from the parent. In the update, weight decay adds the penalty gradient: the ascent direction becomes $\hat g - \lambda\theta$, continuously pulling $\theta$ toward the origin (see the code mapping in Module 10).
         </p>
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">3. Fitness Shaping (Centered Rank Transformation)</span>
+        <span class="proof-step-badge">Pillar 5: Dynamic Episode Cap $m \approx 2\bar{L}$ — Proof of the 50% CPU-Utilization Bound</span>
         <p>
-          Raw returns $F_i$ can contain extreme outliers that destabilize the gradient sum. Before computing the update, ES sorts the population returns from lowest to highest and maps their ranks linearly into $[-0.5, +0.5]$. This removes outlier dominance and prevents premature convergence to local optima.
+          ES works on full-length episodes, and all workers must wait for the slowest one before the update. If one lucky offspring survives $10\times$ longer than the rest, everybody else idles. The paper therefore caps episodes at a constant $m$ steps, adjusted dynamically as training progresses; with $m$ equal to twice the mean steps per episode, "CPU utilization stays above 50% in the worst case."
+        </p>
+        <p><strong>Proof.</strong> Let the $n$ (capped) episode lengths be $\ell_1,\dots,\ell_n \le m$ with mean $\bar L = \frac1n\sum_i\ell_i$. Workers advance in lock-step, so one generation takes $\max_i \ell_i \le m$ steps of wall-clock time. Useful work is $W = \sum_i \ell_i = n\bar L$ worker-steps and the capacity paid for is $n\max_i\ell_i$ worker-steps. Hence</p>
+        $$U \;=\; \frac{W}{n\,\max_i \ell_i} \;\ge\; \frac{n\bar L}{n\,m} \;=\; \frac{\bar L}{m} \;=\; \frac{\bar L}{2\bar L} \;=\; \frac12 .$$
+        <p class="qed">∎</p>
+        <p>
+          <strong>The bound is tight.</strong> Six workers with natural lengths $10,12,8,11,9,50$ (mean $16.7$): without a cap $U = 100/(6\cdot50) = 33\%$. Solving $m = 2\bar L$ for the capped lengths $10,12,8,11,9,m$ gives $m = 25$ (mean $12.5$), and now $U = 75/(6\cdot 25) = 50\%$ exactly.
         </p>
       </div>
 
-      <div class="proof-step">
-        <span class="proof-step-badge">4. Fixed $\sigma$ + Weight Decay (L2 Regularization)</span>
-        <p>
-          Because OpenAI keeps noise standard deviation $\sigma$ fixed (e.g., $\sigma = 0.02$), letting network weights $\theta$ grow to huge values (like $1000.0$) would make a $\pm 0.02$ perturbation negligible. Applying L2 weight decay keeps $\|\theta\|$ small relative to $\sigma\epsilon$ throughout training.
-        </p>
+      <!-- SVG Diagram 7.4 Gantt -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 372" role="img" aria-label="Worker timelines without and with an episode cap">
+          <rect class="sv-bg" width="760" height="372" rx="10"/>
+          <text class="fr bd" x="30" y="26">(A) No cap — useful work 100 / capacity 6×50 = 300 → 33% utilization</text>
+          <!-- A rows: scale 6 px/step, x0=130; y=40+22i -->
+          <g class="fr-d sr w1"><rect x="190" y="40" width="240" height="16"/><rect x="202" y="62" width="228" height="16"/><rect x="178" y="84" width="252" height="16"/><rect x="196" y="106" width="234" height="16"/><rect x="184" y="128" width="246" height="16"/></g>
+          <g class="fb sb w1" style="fill-opacity:.55"><rect x="130" y="40" width="60" height="16"/><rect x="130" y="62" width="72" height="16"/><rect x="130" y="84" width="48" height="16"/><rect x="130" y="106" width="66" height="16"/><rect x="130" y="128" width="54" height="16"/></g>
+          <rect class="fb sb w1" style="fill-opacity:.55" x="130" y="150" width="300" height="16"/>
+          <text class="fm xs end" x="122" y="52">W1 (10)</text><text class="fm xs end" x="122" y="74">W2 (12)</text><text class="fm xs end" x="122" y="96">W3 (8)</text><text class="fm xs end" x="122" y="118">W4 (11)</text><text class="fm xs end" x="122" y="140">W5 (9)</text><text class="fm xs end" x="122" y="162">W6 (50)</text>
+          <text class="fr xs" x="445" y="96">idle (hatched region = wasted CPU)</text>
+
+          <text class="fg bd" x="30" y="206">(B) Cap m = 2L̄ = 25 — useful work 75 / capacity 6×25 = 150 → 50% (the worst-case bound)</text>
+          <g class="fr-d sr w1"><rect x="190" y="220" width="90" height="16"/><rect x="202" y="242" width="78" height="16"/><rect x="178" y="264" width="102" height="16"/><rect x="196" y="286" width="84" height="16"/><rect x="184" y="308" width="96" height="16"/></g>
+          <g class="fg sg w1" style="fill-opacity:.55"><rect x="130" y="220" width="60" height="16"/><rect x="130" y="242" width="72" height="16"/><rect x="130" y="264" width="48" height="16"/><rect x="130" y="286" width="66" height="16"/><rect x="130" y="308" width="54" height="16"/></g>
+          <rect class="fa sa w1" style="fill-opacity:.55" x="130" y="330" width="150" height="16"/>
+          <line class="sa w2 dash" x1="280" y1="212" x2="280" y2="352"/>
+          <text class="fa bd xs" x="288" y="224">cap m = 25</text>
+          <text class="fm xs end" x="122" y="232">W1 (10)</text><text class="fm xs end" x="122" y="254">W2 (12)</text><text class="fm xs end" x="122" y="276">W3 (8)</text><text class="fm xs end" x="122" y="298">W4 (11)</text><text class="fm xs end" x="122" y="320">W5 (9)</text><text class="fm xs end" x="122" y="342">W6 (capped)</text>
+          <text class="fm xs" x="445" y="366">scale: 6 px per environment step, both panels</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 7.4 — Straggler Episodes and the Cap:</strong> Solid bars are useful work; tinted bars are idle time while workers wait at the synchronization barrier. In (A) the 50-step lucky episode makes five workers idle for most of the generation. In (B) the cap $m = 2\bar L$ truncates it, cutting the wasted area to at most the area of useful work (the guarantee $U\ge 50\%$).
+        </div>
       </div>
 
       <div class="proof-step">
-        <span class="proof-step-badge">5. Dynamic Episode Cap ($m = 2\bar{L}$) — Proof of the 50% CPU Utilization Bound</span>
+        <span class="proof-step-badge">Pillar 6: Network Parameterization — Virtual Batch Normalization (Atari) &amp; Action Discretization (MuJoCo)</span>
         <p>
-          If one lucky offspring survives $10\times$ longer than average, all other CPUs sit idle waiting for it. Suppose $n$ workers have a mean episode length of $\bar{L}$ steps, so total useful CPU work is $n \bar{L}$. By capping maximum episode length at $m = 2\bar{L}$, the worst-case wall time is $2\bar{L}$, meaning total allocated CPU capacity is at most $n \times 2\bar{L}$. Dividing useful work by maximum capacity proves:
-          $$\text{CPU Utilization} = \frac{\text{Useful Work}}{\text{Max Capacity}} \ge \frac{n \bar{L}}{n (2\bar{L})} = \frac{1}{2} = 50\%$$
+          ES learns by sampling <em>parameters</em>, so exploration works only if "Gaussian perturbation vectors $\epsilon$ occasionally lead to new individuals $\theta+\sigma\epsilon$ with better return." The paper found that the architecture itself must make perturbations behaviorally meaningful.
+        </p>
+        <p>
+          <strong>(a) Virtual Batch Normalization in Atari.</strong> With DeepMind's convolutional architectures, randomly perturbed parameters often encoded policies that "always took one specific action regardless of the state." Fix: virtual batch normalization (Salimans et al., 2016), which is ordinary batch normalization
+          $$\hat x = \frac{x - \mu_{\mathcal{R}}}{\sqrt{\sigma_{\mathcal{R}}^2 + \varepsilon_{\text{bn}}}}, \qquad y = \gamma\,\hat x + \beta,$$
+          where the statistics $\mu_{\mathcal{R}},\sigma_{\mathcal{R}}^2$ are computed on a <em>reference minibatch $\mathcal{R}$ chosen at the start of training and held fixed</em>. Intuition: with random weights, activations of different input frames tend to be nearly identical (and saturate to the same action); normalizing against a fixed reference batch re-centers and rescales each feature so that small input differences are amplified into different actions, "ensuring that the policy takes a wide-enough variety of actions to gather occasional rewards." The usual downside (extra cost) is negligible here because the reference batch is much smaller than the number of steps in a typical episode; since $\theta$ is fixed during an episode, the reference statistics need not be recomputed per step.
+        </p>
+        <p>
+          <strong>(b) Action discretization in MuJoCo.</strong> The standard multilayer perceptron with $\tanh$ outputs works for nearly all MuJoCo tasks, but for hopping and swimming the paper discretizes each action component into <strong>10 bins</strong>. A continuous output changes <em>smoothly</em> with the weights, so small perturbations only nudge motions. A discretized output is piecewise constant: the action jumps whenever the pre-discretized value crosses a bin edge, which "forced the actions to be non-smooth with respect to input observations and parameter perturbations" and encouraged a wide variety of behaviors. One illustrative scheme (the exact binning is not specified in the paper): for $o\in[-1,1]$ and $B=10$, $\;b=\min\!\big(\lfloor \tfrac{(o+1)B}{2}\rfloor,\,B-1\big),\;a=-1+\tfrac{2b+1}{B}$, giving the ten levels $\{-0.9,-0.7,\dots,+0.9\}$.
         </p>
       </div>
 
-      <div class="proof-step">
-        <span class="proof-step-badge">6. Network Parameterization: Virtual Batch Norm (Atari) &amp; Action Bins (MuJoCo)</span>
-        <p>
-          • <strong>Virtual Batch Normalization (VBN) in Atari:</strong> Standard random CNN weights often saturate into picking the exact same button regardless of input pixels. VBN computes layer mean and variance using a fixed reference minibatch chosen at the start of training, making random policies highly sensitive to tiny pixel changes with negligible overhead (computed once per episode since $\theta$ is fixed during the episode).<br />
-          • <strong>Action Discretization (10 Bins) in Swimmer &amp; Hopper:</strong> Continuous $\tanh$ MLP outputs can be overly smooth. Discretizing motor outputs into $10$ uniform bins introduces step jumps with respect to parameter perturbations, forcing diverse exploratory behaviors.
-        </p>
+      <!-- SVG Diagram 7.5 staircase -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 256" role="img" aria-label="Continuous tanh output versus ten-bin staircase action">
+          <rect class="sv-bg" width="760" height="256" rx="10"/>
+          <line class="sv-axis" x1="80" y1="120" x2="690" y2="120"/>
+          <line class="sv-axis" x1="380" y1="20" x2="380" y2="225"/>
+          <text class="fm sm" x="640" y="140">network output o</text>
+          <text class="fm sm" x="388" y="34">executed action a</text>
+          <text class="fm xs mid" x="80" y="138">−1</text><text class="fm xs mid" x="680" y="138">+1</text>
+          <line class="sb w2 dash" x1="80" y1="220" x2="680" y2="20"/>
+          <path class="nofill sa w3" d="M80 210H140V190H200V170H260V150H320V130H380V110H440V90H500V70H560V50H620V30H680"/>
+          <text class="fb bd sm" x="90" y="200">continuous (smooth in θ)</text>
+          <text class="fa bd sm" x="470" y="214">10-bin staircase: piecewise constant</text>
+          <text class="sm" x="92" y="60">Each bin edge is a jump of 0.2 in the</text>
+          <text class="sm" x="92" y="78">executed action → non-smooth w.r.t. θ</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 7.5 — Why Discretize:</strong> The dashed line is the smooth $\tanh$ output; the amber staircase is the 10-bin action. A parameter perturbation that carries $o$ across a bin edge changes the action discontinuously, producing the diverse behaviors that help ES explore.
+        </div>
       </div>
 
       <!-- ==================== VISUAL BLUEPRINT 3: ATARI CNN + VBN PIPELINE ==================== -->
       <h3>Visualizing the Atari 2600 Pixel-to-Action Pipeline &amp; Virtual Batch Normalization</h3>
       <p>
-        Unlike MuJoCo where inputs are clean joint angles, Atari 2600 environments feed raw television pixels into a Deep Convolutional Neural Network (CNN) and require discrete joystick decisions. The architectural blueprint below shows how ES processes pixel stacks, stabilizes exploration via Virtual Batch Normalization (VBN), and trains without backpropagation:
+        Unlike MuJoCo, where inputs are clean joint angles, Atari 2600 environments feed raw television pixels into a deep convolutional network (the paper uses the same preprocessing and feedforward CNN architecture as Mnih et al., 2016) and need discrete joystick decisions. The blueprint shows how ES processes pixel stacks, stabilizes exploration via VBN, and trains without backpropagation:
       </p>
 
       <div class="blueprint-card">
@@ -707,27 +1202,27 @@
 
         <div class="blueprint-steps-grid">
           <div class="blueprint-step-item">
-            <h5>1. Frame-Skip ($k=4$) &amp; $84\times 84$ Pixel Stack</h5>
+            <h5>1. Frame-Skip &amp; $84\times 84$ Pixel Stack</h5>
             <p>
-              Raw frames from the Atari CRT emulator are preprocessed into a stack of $4$ consecutive $84 \times 84$ frames ($s_{t-3}, s_{t-2}, s_{t-1}, s_t$) with frame-skip $k=4$ so the network can perceive ball and paddle velocity.
+              Raw frames from the Atari emulator are preprocessed in the standard Mnih-style pipeline: a stack of consecutive $84 \times 84$ frames with frame-skip, so the network can perceive ball and paddle velocity.
             </p>
           </div>
           <div class="blueprint-step-item indigo">
             <h5>2. Convolutional Layers + Virtual Batch Norm (VBN)</h5>
             <p>
-              As feature maps pass through the convolutional layers, <strong>Virtual Batch Normalization</strong> normalizes activations using statistics from a fixed reference mini-batch chosen at the start of training—keeping the randomly perturbed network sensitive to subtle pixel shifts.
+              As feature maps pass through the convolutional layers, <strong>VBN</strong> normalizes activations with statistics from a fixed reference mini-batch chosen at the start of training, keeping the randomly perturbed network sensitive to subtle pixel shifts.
             </p>
           </div>
           <div class="blueprint-step-item emerald">
             <h5>3. Deterministic Discrete Action ($\text{argmax}$)</h5>
             <p>
-              Fully connected layers output a score for each discrete joystick command (<code>LEFT</code>, <code>RIGHT</code>, <code>NO-OP</code>, <code>FIRE</code>). Because exploration already happens in parameter space ($\theta + \sigma\epsilon$), the policy selects actions deterministically via $a_t = \text{argmax}(\text{scores})$.
+              Fully connected layers output a score per joystick command (<code>LEFT</code>, <code>RIGHT</code>, <code>NO-OP</code>, <code>FIRE</code>…). Because exploration already happens in parameter space ($\theta + \sigma\epsilon$), the policy picks $a_t = \text{argmax}(\text{scores})$ deterministically (the paper's Table 2 uses deterministic policy evaluation).
             </p>
           </div>
           <div class="blueprint-step-item amber">
             <h5>4. Pure Episode Return Feedback ($F_i = \sum r_t$)</h5>
             <p>
-              Step rewards $r_t$ are accumulated across the episode into a single scalar return $F_i = \sum r_t$ that guides parameter perturbation ($\theta + \sigma\epsilon$)—operating with <strong>No Backpropagation</strong> and <strong>No Value Function</strong>.
+              Step rewards $r_t$ accumulate into a single scalar return $F_i = \sum r_t$ that guides the perturbation search—with <strong>No Backpropagation</strong> and <strong>No Value Function</strong>.
             </p>
           </div>
         </div>
@@ -735,17 +1230,49 @@
     </section>
 
     <!-- ===================================================================== -->
-    <!-- MODULE 8: PARAMETER SPACE VS ACTION SPACE SMOOTHING + CODE MAPPING    -->
+    <!-- MODULE 8: PARAMETER SPACE VS ACTION SPACE SMOOTHING                   -->
     <!-- ===================================================================== -->
     <section id="mod-8" class="module-section">
       <div class="module-header">
-        <span class="module-tag">Module 08 • Section 3 &amp; Code Translation</span>
-        <h2>Parameter-Space Smoothing (ES) vs. Action-Space Smoothing (PG)</h2>
+        <span class="module-tag">Module 08 • Section 3</span>
+        <h2>Parameter-Space Smoothing (ES) vs. Action-Space Smoothing (PG), Dimensionality &amp; Advantages <span class="paper-ref">Paper §3</span></h2>
       </div>
 
       <p>
-        Section 3 of the paper unifies Policy Gradients (PG) and Evolution Strategies (ES) under a single mathematical lens: both methods smooth the non-differentiable objective $F(\theta) = R(a(\theta))$ by injecting random noise, differing only in <strong>where</strong> the noise is injected:
+        Section 3 of the paper unifies Policy Gradients (PG) and Evolution Strategies under one lens. Both solve decision problems that return $R(\mathbf{a})$ for an action sequence $\mathbf{a} = \{a_1,\dots,a_T\}$ with $a_t = \pi(s_t;\theta)$, so that the objective is $F(\theta) = R(\mathbf{a}(\theta))$. Because actions may be discrete and the policy deterministic, $F(\theta)$ may be non-smooth, and because we cannot access the transition function, we cannot backpropagate through it. Both methods therefore <strong>add noise to smooth the problem</strong>, differing only in <em>where</em> the noise is injected:
       </p>
+
+      <!-- SVG Diagram 8.1 -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 316" role="img" aria-label="Noise injected at every step in action space for policy gradients versus once per episode in parameter space for ES">
+          <defs>
+            <marker id="arrP" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--text-muted)"/></marker>
+          </defs>
+          <rect class="sv-bg" width="760" height="316" rx="10"/>
+          <text class="fr bd lg" x="30" y="28">Policy gradients: noise in ACTION space, sampled at EVERY step</text>
+          <rect class="fb-d sb w2" x="30" y="48" width="90" height="46" rx="8"/><text class="fb bd mid" x="75" y="76">state s_t</text>
+          <rect class="fi-d si w2" x="160" y="48" width="150" height="46" rx="8"/><text class="fi bd mid" x="235" y="68">π(s_t; θ)</text><text class="xs mid" x="235" y="84">action scores</text>
+          <circle class="fa-d sa w3" cx="375" cy="71" r="26"/><text class="fa bd mid" x="375" y="76">ε_t</text><text class="xs fa mid" x="375" y="112">softmax sample</text>
+          <rect class="fg-d sg w2" x="430" y="48" width="100" height="46" rx="8"/><text class="fg bd mid" x="480" y="76">action a_t</text>
+          <rect class="fm-d sx w2 fnone" x="570" y="48" width="100" height="46" rx="8"/><text class="bd mid" x="620" y="76">environment</text>
+          <line class="sx w2" x1="120" y1="71" x2="160" y2="71" marker-end="url(#arrP)"/><line class="sx w2" x1="310" y1="71" x2="349" y2="71" marker-end="url(#arrP)"/><line class="sx w2" x1="401" y1="71" x2="430" y2="71" marker-end="url(#arrP)"/><line class="sx w2" x1="530" y1="71" x2="570" y2="71" marker-end="url(#arrP)"/>
+          <path class="nofill sx w2 dash" d="M620 94V128H75V94" marker-end="url(#arrP)"/>
+          <text class="fr bd sm mid" x="350" y="146">repeat for t = 1…T → T noise draws per episode</text>
+          <text class="sm mid" x="350" y="164">∇_θ log p(a;θ) = Σ_t ∇_θ log p(a_t;θ): a sum of T terms → variance grows ~ linearly in T</text>
+
+          <text class="fg bd lg" x="30" y="206">Evolution strategies: noise in PARAMETER space, sampled ONCE per episode</text>
+          <rect class="fi-d si w2" x="30" y="226" width="90" height="46" rx="8"/><text class="fi bd mid" x="75" y="254">θ</text>
+          <circle class="fa-d sa w3" cx="170" cy="249" r="26"/><text class="fa bd mid" x="170" y="254">σε</text><text class="xs fa mid" x="170" y="290">once, at episode start</text>
+          <rect class="fi-d si w2" x="230" y="226" width="110" height="46" rx="8"/><text class="fi bd mid" x="285" y="254">θ̃ = θ + σε</text>
+          <rect class="fb-d sb w2" x="380" y="226" width="190" height="46" rx="8"/><text class="fb bd mid" x="475" y="246">deterministic π(s_t; θ̃)</text><text class="xs mid" x="475" y="262">for t = 1…T, no further noise</text>
+          <rect class="fg-d sg w2" x="610" y="226" width="110" height="46" rx="8"/><text class="fg bd mid" x="665" y="254">return R</text>
+          <line class="sx w2" x1="120" y1="249" x2="144" y2="249" marker-end="url(#arrP)"/><line class="sx w2" x1="196" y1="249" x2="230" y2="249" marker-end="url(#arrP)"/><line class="sx w2" x1="340" y1="249" x2="380" y2="249" marker-end="url(#arrP)"/><line class="sx w2" x1="570" y1="249" x2="610" y2="249" marker-end="url(#arrP)"/>
+          <text class="fg bd sm" x="430" y="306">score ∇_θ log p(θ̃;θ) = ε/σ is independent of T</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 8.1 — Where the Noise Lives:</strong> PG injects fresh randomness at every one of the $T$ steps; ES injects it once, in the weights, and then acts deterministically. The two methods can even be combined by adding noise to both.
+        </div>
+      </div>
 
       <div class="data-table-wrapper">
         <table class="data-table">
@@ -758,63 +1285,465 @@
           </thead>
           <tbody>
             <tr>
-              <td><strong>Where Noise is Injected</strong></td>
-              <td>Sampled at <strong>every time step $t$</strong> via stochastic action distribution $a(\epsilon, \theta)$ (e.g., Softmax).</td>
-              <td>Sampled <strong>once per episode</strong> directly on network weights: $\tilde{\theta} = \theta + \xi$ ($\xi \sim \mathcal{N}(0, \sigma^2 I)$).</td>
+              <td><strong>Where noise is injected</strong></td>
+              <td>At <strong>every time step $t$</strong> via a stochastic action distribution $\mathbf{a}(\epsilon,\theta)$ (e.g., softmax over action scores).</td>
+              <td><strong>Once per episode</strong> on the weights: $\tilde\theta = \theta + \xi$, $\xi\sim\mathcal{N}(0,\sigma^2 I)$; then $a_t = \pi(s_t;\tilde\theta)$.</td>
             </tr>
             <tr>
-              <td><strong>Smoothed Objective</strong></td>
-              <td>$F_{PG}(\theta) = \mathbb{E}_\epsilon R(a(\epsilon, \theta))$</td>
-              <td>$F_{ES}(\theta) = \mathbb{E}_\xi R(a(\xi, \theta))$</td>
+              <td><strong>Smoothed objective</strong></td>
+              <td>$F_{PG}(\theta) = \mathbb{E}_\epsilon R(\mathbf{a}(\epsilon,\theta))$</td>
+              <td>$F_{ES}(\theta) = \mathbb{E}_\xi R(\mathbf{a}(\xi,\theta))$ — a Gaussian blur of the original objective</td>
             </tr>
             <tr>
-              <td><strong>Gradient Estimator</strong></td>
-              <td>$\nabla_\theta F_{PG}(\theta) = \mathbb{E}_\epsilon \{ R(a) \nabla_\theta \log p(a(\epsilon, \theta); \theta) \}$</td>
-              <td>$\nabla_\theta F_{ES}(\theta) = \mathbb{E}_\xi \{ R(a) \nabla_\theta \log p(\tilde{\theta}(\xi, \theta); \theta) \}$</td>
+              <td><strong>Gradient estimator</strong></td>
+              <td>$\nabla_\theta F_{PG} = \mathbb{E}_\epsilon\{R(\mathbf{a})\nabla_\theta\log p(\mathbf{a}(\epsilon,\theta);\theta)\}$</td>
+              <td>$\nabla_\theta F_{ES} = \mathbb{E}_\xi\{R(\mathbf{a})\nabla_\theta\log p(\tilde\theta(\xi,\theta);\theta)\}$</td>
             </tr>
             <tr>
-              <td><strong>How $\nabla_\theta \log p$ is Computed</strong></td>
-              <td>Requires full backpropagation through the neural network at every single frame $t=1\dots T$.</td>
-              <td><strong>Zero backpropagation!</strong> Simplifies algebraically to $\frac{\xi}{\sigma^2} = \frac{\epsilon}{\sigma}$.</td>
+              <td><strong>Score function</strong></td>
+              <td>Needs backpropagation through the network at every step $t=1\dots T$.</td>
+              <td>No backpropagation: $\nabla_\theta\log p(\tilde\theta;\theta) = \xi/\sigma^2 = \epsilon/\sigma$.</td>
             </tr>
             <tr>
-              <td><strong>Sensitivity to Episode Length $T$</strong></td>
-              <td>Gradient variance grows linearly with $T$ (requires discounting $\gamma$ and value baselines).</td>
-              <td>Variance is independent of episode length $T$; handles sparse/delayed rewards effortlessly.</td>
+              <td><strong>Dependence on episode length $T$</strong></td>
+              <td>Gradient variance grows nearly linearly in $T$ (hence discounting and value baselines, which introduce bias).</td>
+              <td>The score term is independent of $T$; suited to long horizons, long-lasting actions, delayed rewards.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>Complete Theory-to-Code Mapping</h3>
+      <h3>3.1 When Is ES Better than Policy Gradients? (Variance Analysis)</h3>
+      <div class="proof-step">
+        <span class="proof-step-badge">Variance scaling argument</span>
+        <p>Suppose the correlation between the return and the individual actions is low (true for any hard RL problem) and both gradients are estimated by simple Monte Carlo (REINFORCE) with a good baseline. Then, as the paper states,</p>
+        $$\mathrm{Var}[\nabla_\theta F_{PG}(\theta)] \approx \mathrm{Var}[R(\mathbf{a})]\;\mathrm{Var}[\nabla_\theta \log p(\mathbf{a};\theta)], \qquad \mathrm{Var}[\nabla_\theta F_{ES}(\theta)] \approx \mathrm{Var}[R(\mathbf{a})]\;\mathrm{Var}[\nabla_\theta \log p(\tilde\theta;\theta)].$$
+        <p>With similar exploration, $\mathrm{Var}[R]$ is comparable, so the difference lies in the second factor. For PG, $\nabla_\theta\log p(\mathbf{a};\theta) = \sum_{t=1}^{T}\nabla_\theta\log p(a_t;\theta)$ is a sum of $T$ uncorrelated terms; if each has variance $v$, the sum has variance $Tv$: <strong>linear in $T$</strong>. For ES, $\nabla_\theta \log p(\tilde\theta;\theta)=\epsilon/\sigma$ is <strong>independent of $T$</strong>.</p>
+        <p>PG practitioners shrink the effective $T$ by <em>discounting</em> (critical for Atari, but biased when actions have long-lasting effects) or by <em>value-function approximation</em> (also effective, but again biased). Hence ES is an attractive choice "if the effective number of time steps $T$ is long, actions have long-lasting effects, and if no good value function estimates are available."</p>
+      </div>
+
+      <h3>3.2 Problem Dimensionality</h3>
       <p>
-        Here is how every mathematical equation in this curriculum translates directly into the Python functions inside <code>03_Implementation/es_core.py</code> and <code>train_es_mujoco.py</code>:
+        Because ES is a randomized finite-difference method (Module 6), theory suggests poor scaling with the parameter dimension $d$: for general non-smooth optimization the number of steps scales linearly with $d$ (Nesterov &amp; Spokoiny, 2011). The paper's key clarification is that this does <strong>not</strong> mean bigger networks perform worse: what matters is the <em>intrinsic</em> dimension of the optimization problem, not the count of parameters.
+      </p>
+      <div class="proof-step">
+        <span class="proof-step-badge">Duplicate-feature thought experiment</span>
+        <p>Fit a univariate $y$ with the linear model $\hat y = \mathbf{x}\cdot\mathbf{w}$. Now concatenate $\mathbf{x}$ with itself, $\mathbf{x}' = (\mathbf{x},\mathbf{x})$, doubling both features and parameters: $\hat y' = \mathbf{x}\cdot(\mathbf{w}_1+\mathbf{w}_2)$. The function class is identical, so the problem is no harder, and ES "will do exactly the same thing when applied to this higher dimensional problem, as long as we divide the standard deviation of the noise by two, as well as the learning rate." (A quick bookkeeping check: the effective weight $\mathbf{w}_1+\mathbf{w}_2$ receives noise of std $\sigma'\sqrt2$, so matching the induced function-space noise needs $\sigma' = \sigma/\sqrt2$ and $\alpha'=\alpha/2$. The paper's "divide by two" is a loose statement of the same point: rescale $\sigma$ and $\alpha$ and nothing intrinsic changes.)</p>
+      </div>
+      <p>
+        Empirically the paper even observes slightly <em>better</em> results with larger networks (it tried both the larger and smaller network of A3C on Atari), and hypothesizes the same effect that makes gradient-based training of large networks easier: large networks have fewer bad local minima (Kawaguchi, 2016).
       </p>
 
-<pre><code># 1. Fitness Shaping: Mapping raw returns F_i to centered ranks u_i in [-0.5, +0.5]
-def compute_centered_ranks(x: np.ndarray) -> np.ndarray:
-    ranks = np.empty(len(x.ravel()), dtype=int)
-    ranks[x.ravel().argsort()] = np.arange(len(x.ravel()))
-    return (ranks.reshape(x.shape).astype(np.float32) / (x.size - 1)) - 0.5
+      <h3>3.3 Advantages of Not Calculating Gradients</h3>
+      <div class="cards-grid">
+        <div class="stat-card">
+          <h5>Cheap communication</h5>
+          <p>Only the scalar return and the random seed (index) cross the network; no full gradients as in policy gradients or Q-learning.</p>
+        </div>
+        <div class="stat-card emerald">
+          <h5>Sparse &amp; delayed rewards</h5>
+          <p>Only the <em>total</em> return of an episode is used, never individual rewards or their exact timing, so maximally sparse and delayed rewards are fine.</p>
+        </div>
+        <div class="stat-card amber">
+          <h5>Less compute and memory</h5>
+          <p>No backpropagation cuts computation per episode by about two thirds, and memory by potentially much more.</p>
+        </div>
+        <div class="stat-card indigo">
+          <h5>No exploding gradients</h5>
+          <p>Smoothing in parameter space removes the pathological curvature behind exploding gradients in recurrent nets: bounded, smooth cost functions cannot have exploding gradients.</p>
+        </div>
+        <div class="stat-card rose">
+          <h5>Non-differentiable modules</h5>
+          <p>ES can train architectures with non-differentiable parts, such as hard attention (Xu et al., 2015).</p>
+        </div>
+        <div class="stat-card">
+          <h5>Low-precision hardware</h5>
+          <p>Binary or low-precision networks and inference-only chips (e.g. TPUs, whose limited memory usually rules out backpropagation) can be used directly.</p>
+        </div>
+        <div class="stat-card emerald">
+          <h5>Invariance to action frequency</h5>
+          <p>Since noise lives in parameter space, ES is naturally invariant to how often the agent acts, so the crucial frame-skip parameter of MDP-based RL matters far less (see Module 9).</p>
+        </div>
+      </div>
+    </section>
 
-# 2. Antithetic Perturbation Rollouts: Evaluating F(theta + sigma*eps) and F(theta - sigma*eps)
-for sign in (1.0, -1.0):
-    theta_perturbed = theta + (sign * sigma) * eps
-    return_val = run_episode(env, policy, theta_perturbed)
+    <!-- ===================================================================== -->
+    <!-- MODULE 9: EXPERIMENTS                                                 -->
+    <!-- ===================================================================== -->
+    <section id="mod-9" class="module-section">
+      <div class="module-header">
+        <span class="module-tag">Module 09 • Section 4 &amp; Supplement</span>
+        <h2>The Evidence: MuJoCo, Atari, Parallel Scaling &amp; Frame-Skip <span class="paper-ref">Paper §4</span></h2>
+      </div>
 
-# 3. Score Function Gradient Recombination: (1 / (n * sigma)) * sum(u_i * eps_i)
+      <div class="cards-grid">
+        <div class="stat-card"><span class="stat-big">10 min</span><p>3D Humanoid solved with <strong>1,440</strong> CPU cores (80 machines); about 11 hours on one 18-core machine.</p></div>
+        <div class="stat-card emerald"><span class="stat-big">~1 hour</span><p>Per Atari game on 720 CPUs (Amazon EC2), 1 billion frames, 51 games.</p></div>
+        <div class="stat-card amber"><span class="stat-big">23 / 28</span><p>Atari games where ES (1 h) beats / loses to the published 1-day A3C result.</p></div>
+        <div class="stat-card indigo"><span class="stat-big">≤ 10×</span><p>Data penalty vs. TRPO on hard MuJoCo tasks; up to $3\times$ <em>better</em> sample complexity on simple ones.</p></div>
+      </div>
+
+      <h3>4.1 MuJoCo: ES vs. a Highly Tuned TRPO</h3>
+      <p>
+        ES and TRPO trained policies with identical architectures (two 64-unit $\tanh$ hidden layers) on continuous-control tasks from OpenAI Gym. For hopping and swimming, ES discretized the actions into 10 bins. ES was run over 6 random seeds and the mean learning curves were compared with TRPO's. The table reports the <strong>ratio of ES timesteps to TRPO timesteps</strong> needed to reach a given percentage of TRPO's learning progress at 5 million timesteps (values below $1$ mean ES needed <em>fewer</em> timesteps).
+      </p>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <caption>Table 1 of the paper (ratio ES timesteps / TRPO timesteps).</caption>
+          <thead><tr><th>Environment</th><th>25%</th><th>50%</th><th>75%</th><th>100%</th></tr></thead>
+          <tbody>
+            <tr><td>HalfCheetah</td><td class="num good">0.15</td><td class="num good">0.49</td><td class="num good">0.42</td><td class="num good">0.58</td></tr>
+            <tr><td>Hopper</td><td class="num good">0.53</td><td class="num bad">3.64</td><td class="num bad">6.05</td><td class="num bad">6.94</td></tr>
+            <tr><td>InvertedDoublePendulum</td><td class="num good">0.46</td><td class="num good">0.48</td><td class="num good">0.49</td><td class="num bad">1.23</td></tr>
+            <tr><td>InvertedPendulum</td><td class="num good">0.28</td><td class="num good">0.52</td><td class="num good">0.78</td><td class="num good">0.88</td></tr>
+            <tr><td>Swimmer</td><td class="num good">0.56</td><td class="num good">0.47</td><td class="num good">0.53</td><td class="num good">0.30</td></tr>
+            <tr><td>Walker2d</td><td class="num good">0.41</td><td class="num bad">5.69</td><td class="num bad">8.02</td><td class="num bad">7.88</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SVG Diagram 9.1: bars -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 292" role="img" aria-label="Bar chart of ES to TRPO timestep ratios at 100 percent of TRPO progress">
+          <rect class="sv-bg" width="760" height="292" rx="10"/>
+          <text class="fw bd" x="30" y="22">Ratio ES/TRPO timesteps to reach 100% of TRPO's final performance (lower is better for ES)</text>
+          <line class="sv-axis" x1="200" y1="34" x2="200" y2="252"/>
+          <line class="sv-grid" x1="260" y1="34" x2="260" y2="252"/>
+          <text class="fa bd xs" x="266" y="46">break-even (1×)</text>
+          <!-- scale 60 px/unit -->
+          <text class="end" x="190" y="58">HalfCheetah</text><rect class="fg" x="200" y="44" width="34.8" height="22" rx="3"/><text class="fg bd sm" x="242" y="60">0.58</text>
+          <text class="end" x="190" y="96">Hopper</text><rect class="fr" x="200" y="82" width="416.4" height="22" rx="3"/><text class="fr bd sm" x="624" y="98">6.94</text>
+          <text class="end" x="190" y="134">InvertedDoublePendulum</text><rect class="fr" x="200" y="120" width="73.8" height="22" rx="3"/><text class="fr bd sm" x="282" y="136">1.23</text>
+          <text class="end" x="190" y="172">InvertedPendulum</text><rect class="fg" x="200" y="158" width="52.8" height="22" rx="3"/><text class="fg bd sm" x="260" y="174">0.88</text>
+          <text class="end" x="190" y="210">Swimmer</text><rect class="fg" x="200" y="196" width="18" height="22" rx="3"/><text class="fg bd sm" x="226" y="212">0.30</text>
+          <text class="end" x="190" y="248">Walker2d</text><rect class="fr" x="200" y="234" width="472.8" height="22" rx="3"/><text class="fr bd sm" x="680" y="250">7.88</text>
+          <text class="fm xs mid" x="200" y="276">0</text><text class="fm xs mid" x="320" y="276">2</text><text class="fm xs mid" x="440" y="276">4</text><text class="fm xs mid" x="560" y="276">6</text><text class="fm xs mid" x="680" y="276">8</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 9.1 — Sample Efficiency vs. TRPO (final-performance column of Table 1):</strong> ES is more sample-efficient on HalfCheetah, InvertedPendulum and Swimmer, but pays a penalty of up to roughly $8\times$ on the hard Hopper and Walker2d tasks, consistent with the paper's "less than $10\times$" statement. That penalty is what massive parallelism buys back in wall-clock time.
+        </div>
+      </div>
+
+      <h3>4.2 Atari: One Hour of ES vs. One Day of A3C</h3>
+      <p>
+        ES was run in parallel (Algorithm 2) on 51 Atari 2600 games with the same preprocessing and feedforward CNN architecture as Mnih et al. (2016). All games were trained for 1 billion frames, which needs about the same amount of network computation as the published 1-day A3C results (320 million frames), because ES does no backpropagation and has no value function. Across the games compared, ES performed better in <strong>23</strong> and worse in <strong>28</strong>. A selection of rows from the paper's Table 2 (final scores; A3C = feedforward, 1 day; ES = feedforward, 1 hour) shows how different the two methods' strengths are:
+      </p>
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <caption>Selected rows of Table 2 as printed in the paper (averaged over 10 re-runs with up to 30 random initial no-ops; deterministic policy evaluation).</caption>
+          <thead><tr><th>Game</th><th>A3C FF, 1 day</th><th>ES FF, 1 hour</th><th>Winner</th></tr></thead>
+          <tbody>
+            <tr><td>Atlantis</td><td class="num">772,392.0</td><td class="num">1,267,410.0</td><td class="good">ES</td></tr>
+            <tr><td>Boxing</td><td class="num">33.7</td><td class="num">49.8</td><td class="good">ES</td></tr>
+            <tr><td>Freeway</td><td class="num">0.1</td><td class="num">31.0</td><td class="good">ES</td></tr>
+            <tr><td>Kangaroo</td><td class="num">106.0</td><td class="num">11,200.0</td><td class="good">ES</td></tr>
+            <tr><td>Pong</td><td class="num">11.4</td><td class="num">21.0</td><td class="good">ES</td></tr>
+            <tr><td>Venture</td><td class="num">19.0</td><td class="num">760.0</td><td class="good">ES</td></tr>
+            <tr><td>Zaxxon</td><td class="num">2,659.0</td><td class="num">6,380.0</td><td class="good">ES</td></tr>
+            <tr><td>Asterix</td><td class="num">6,723.0</td><td class="num">1,440.0</td><td class="bad">A3C</td></tr>
+            <tr><td>Beam Rider</td><td class="num">13,235.9</td><td class="num">744.0</td><td class="bad">A3C</td></tr>
+            <tr><td>Breakout</td><td class="num">551.6</td><td class="num">9.5</td><td class="bad">A3C</td></tr>
+            <tr><td>Demon Attack</td><td class="num">84,997.5</td><td class="num">1,166.5</td><td class="bad">A3C</td></tr>
+            <tr><td>Q*Bert</td><td class="num">13,752.3</td><td class="num">147.5</td><td class="bad">A3C</td></tr>
+            <tr><td>Video Pinball</td><td class="num">185,852.6</td><td class="num">22,834.8</td><td class="bad">A3C</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warning">
+        <span class="callout-title">Honest reading of the evidence</span>
+        <p>
+          ES is <em>competitive</em>, not universally better: it needs $3\times$–$10\times$ more data than A3C on Atari, and loses on more games than it wins. The paper's claim is that, because ES parallelizes so well, "the slight decrease in data efficiency is partly offset" by the saved computation, and the decrease is "made up for" by scaling to more workers.
+        </p>
+      </div>
+
+      <h3>4.3 Parallelization: Linear Speed-Up</h3>
+      <p>
+        On 3D Humanoid (one of the most challenging continuous-control problems solvable by RL at the time) ES needs about 11 hours on a single 18-core machine, "on par with RL." Distributed over 80 machines and 1,440 CPU cores it needs 10 minutes (median of 7 repetitions), a reduction in experiment turnaround of two orders of magnitude.
+      </p>
+
+      <!-- SVG Diagram 9.2: scaling plot -->
+      <div class="diagram-container">
+        <svg class="fig" viewBox="0 0 760 310" role="img" aria-label="Log-log plot of time to solve 3D Humanoid versus number of CPU cores">
+          <rect class="sv-bg" width="760" height="310" rx="10"/>
+          <line class="sv-axis" x1="100" y1="250" x2="600" y2="250"/>
+          <line class="sv-axis" x1="100" y1="20" x2="100" y2="250"/>
+          <line class="sv-grid" x1="300" y1="20" x2="300" y2="250"/><line class="sv-grid" x1="500" y1="20" x2="500" y2="250"/>
+          <line class="sv-grid" x1="100" y1="220" x2="600" y2="220"/><line class="sv-grid" x1="100" y1="120" x2="600" y2="120"/><line class="sv-grid" x1="100" y1="20" x2="600" y2="20"/>
+          <text class="fm xs mid" x="100" y="268">10¹</text><text class="fm xs mid" x="300" y="268">10²</text><text class="fm xs mid" x="500" y="268">10³</text>
+          <text class="fm xs end" x="92" y="224">10¹</text><text class="fm xs end" x="92" y="124">10²</text><text class="fm xs end" x="92" y="24">10³</text>
+          <text class="fm sm mid" x="350" y="292">number of CPU cores</text>
+          <text class="fm sm" x="14" y="16">median minutes to score 6000</text>
+
+          <line class="sg w2 dash" x1="151" y1="38.2" x2="531.7" y2="228.6"/>
+          <line class="sb w3" x1="151" y1="38.2" x2="531.7" y2="220"/>
+          <circle class="fb" cx="151" cy="38.2" r="7"/><circle class="fb" cx="531.7" cy="220" r="7"/>
+          <text class="fb bd sm" x="166" y="42">18 cores — 657 min (≈ 11 h)</text>
+          <text class="fb bd sm" x="445" y="205">1,440 cores — 10 min</text>
+          <text class="fg bd xs" x="380" y="248">perfect linear speed-up would give 8.2 min</text>
+
+          <text class="fw bd" x="630" y="70">Reading it</text>
+          <text class="sm" x="630" y="92">Log–log axes:</text>
+          <text class="sm" x="630" y="110">a straight line of</text>
+          <text class="sm" x="630" y="128">slope −1 means</text>
+          <text class="sm" x="630" y="146">linear speed-up.</text>
+          <text class="fg bd sm" x="630" y="176">Measured:</text>
+          <text class="sm" x="630" y="194">657 / 10 ≈ 66×</text>
+          <text class="sm" x="630" y="212">on 80× more cores</text>
+          <text class="sm" x="630" y="230">(≈ 82% of ideal)</text>
+        </svg>
+        <div class="diagram-caption">
+          <strong>Figure 9.2 — ES Scales Almost Linearly (re-drawn from the paper's Figure 1 endpoints):</strong> Going from 18 to 1,440 cores (an $80\times$ increase) cut the time to reach a score of 6000 on 3D Humanoid from 657 to 10 minutes, a $\approx 66\times$ speed-up, i.e. about 82% of the ideal $657\cdot18/1440 \approx 8.2$ minutes (our arithmetic). The paper reports linear speed-up in the number of cores for this task.
+        </div>
+      </div>
+
+      <h3>4.4 Invariance to Temporal Resolution (Frame-Skip)</h3>
+      <p>
+        MDP-based RL treats the action frequency (frame-skip) as a crucial parameter: too high and the agent cannot act finely enough; too low and the effective episode length $T$ grows, hurting optimization (the $T$-dependent variance of Module 8). ES's gradient estimate is invariant to the episode length, so it should be much more robust. The paper tests this on Pong with frame-skip in $\{1,2,3,4\}$: the learning curves look very similar, each converging in about 100 weight updates.
+      </p>
+
+      <h3>What Else the Paper Reports</h3>
+      <ul>
+        <li><strong>Exploration:</strong> on the MuJoCo humanoid, ES learned a very wide variety of gaits (walking sideways, walking backwards) never observed with TRPO, suggesting qualitatively different exploration behavior.</li>
+        <li><strong>Robustness:</strong> one fixed hyperparameter set for all Atari games and one for all MuJoCo tasks (apart from one binary hyperparameter that varies between MuJoCo environments).</li>
+        <li><strong>Future work:</strong> long horizons and complicated reward structure, meta-learning (learning-to-learn), and combining ES with fast low-precision network implementations.</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- MODULE 10: THEORY-TO-CODE MAPPING                                     -->
+    <!-- ===================================================================== -->
+    <section id="mod-10" class="module-section">
+      <div class="module-header">
+        <span class="module-tag">Module 10 • Code Translation &amp; Review</span>
+        <h2>Theory-to-Code Mapping, Self-Check &amp; Takeaways</h2>
+      </div>
+
+      <p>
+        Here is how every equation in this curriculum translates into the Python functions of <code>03_Implementation/es_core.py</code> and <code>train_es_mujoco.py</code>. The snippets below are reference sketches consistent with those functions; adapt names to your repository.
+      </p>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Math</th><th>Code name</th><th>Where it came from</th></tr></thead>
+          <tbody>
+            <tr><td>$\theta_t \in \mathbb{R}^d$</td><td><code>theta</code></td><td>Module 2: flattened weights and biases</td></tr>
+            <tr><td>$\sigma$</td><td><code>sigma</code></td><td>Module 4/7: fixed noise scale</td></tr>
+            <tr><td>$\epsilon_i$, index <code>idx</code></td><td><code>eps</code>, <code>noise_inds[i]</code></td><td>Algorithm 2 &amp; Pillar 1: slice of the shared noise table</td></tr>
+            <tr><td>$F(\theta\pm\sigma\epsilon_i)$</td><td><code>returns[i, 0/1]</code></td><td>Pillar 2: antithetic pair</td></tr>
+            <tr><td>$u_i$</td><td><code>proc_rets</code></td><td>Pillar 3: centered ranks</td></tr>
+            <tr><td>$n$ (total evaluations)</td><td><code>pop_size = 2 * num_pairs</code></td><td>Algorithm 1: counts both members of each pair</td></tr>
+            <tr><td>$\lambda$ (weight decay)</td><td><code>l2coeff</code></td><td>Pillar 4</td></tr>
+            <tr><td>$m \approx 2\bar L$</td><td><code>max_steps</code></td><td>Pillar 5: dynamic episode cap</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+<pre><code>import numpy as np
+
+# 1. Fitness shaping (Pillar 3): map raw returns F_i to centered ranks u_i in [-0.5, +0.5]
+def compute_centered_ranks(x: np.ndarray) -&gt; np.ndarray:
+    ranks = np.empty(x.size, dtype=int)
+    ranks[x.ravel().argsort()] = np.arange(x.size)           # rank 0 = worst, n-1 = best
+    y = ranks.reshape(x.shape).astype(np.float32)
+    return y / (x.size - 1) - 0.5                            # zero-sum, bounded, outlier-proof
+
+# 2. Shared noise table (Algorithm 2 / Pillar 1): every worker builds the SAME table from a common seed
+class SharedNoiseTable:
+    def __init__(self, seed: int, size: int):
+        self.noise = np.random.RandomState(seed).randn(size).astype(np.float32)
+    def get(self, idx: int, d: int) -&gt; np.ndarray:
+        return self.noise[idx : idx + d]                     # eps = noise[idx : idx + d]
+    def sample_index(self, rng, d: int) -&gt; int:
+        return rng.randint(0, len(self.noise) - d + 1)       # only this integer is communicated
+
+# 3. Antithetic rollouts (Pillar 2): evaluate F(theta + sigma*eps) and F(theta - sigma*eps)
+def evaluate_pair(env, policy, theta, sigma, eps, max_steps):
+    rets = np.zeros(2, dtype=np.float32)
+    for k, sign in enumerate((+1.0, -1.0)):
+        theta_perturbed = theta + (sign * sigma) * eps
+        rets[k] = run_episode(env, policy, theta_perturbed, max_steps=max_steps)   # forward passes only
+    return rets
+
+# 4. Score-function recombination: (1 / (n * sigma)) * sum_i u_i * eps_i
+proc_rets = compute_centered_ranks(returns)                  # returns has shape (num_pairs, 2)
+pop_size = 2 * num_pairs                                     # n counts BOTH members of each pair
 grad = np.zeros_like(theta)
 for i in range(num_pairs):
-    eps = noise_table[noise_inds[i] : noise_inds[i] + len(theta)]
+    eps = noise_table.get(noise_inds[i], len(theta))
     # Antithetic subtraction: u_pos * (+eps) + u_neg * (-eps) = (u_pos - u_neg) * eps
     grad += (proc_rets[i, 0] - proc_rets[i, 1]) * eps
 grad /= (pop_size * sigma)
 
-# 4. Weight Decay (L2) &amp; Parent Update (theta_{t+1})
+# 5. Weight decay (Pillar 4) &amp; parent update theta_{t+1}
+#    The optimizer MINIMIZES, so the ascent direction `grad` enters with a minus sign.
 globalg = -grad + l2coeff * theta
 theta = optimizer.update(globalg)</code></pre>
+
+      <h4>Supporting snippets for Pillars 5 and 6</h4>
+<pre><code># Pillar 5: dynamic episode cap, keeping CPU utilization &gt;= 50 percent
+max_steps = int(2 * np.mean(recent_episode_lengths))         # m = 2 * L_bar, re-estimated as training progresses
+
+# Pillar 6b: discretize a tanh output o in [-1, 1] into B = 10 bins (illustrative scheme)
+def discretize(o: np.ndarray, n_bins: int = 10) -&gt; np.ndarray:
+    b = np.minimum(((o + 1.0) / 2.0 * n_bins).astype(int), n_bins - 1)
+    return -1.0 + (2.0 * b + 1.0) / n_bins                   # levels -0.9, -0.7, ..., +0.9
+
+# Pillar 6a: virtual batch norm = batch norm with FIXED reference statistics
+def vbn(x, ref_mean, ref_var, gamma, beta, eps=1e-5):
+    return gamma * (x - ref_mean) / np.sqrt(ref_var + eps) + beta
+# ref_mean / ref_var come from one fixed reference batch, computed with the current theta
+# (theta is constant within an episode, so they are computed once per episode, not per step).</code></pre>
+
+      <h3>Self-Check: Can You Explain It Without Looking?</h3>
+      <details class="quiz">
+        <summary>1. Why can't we simply backpropagate through the environment?</summary>
+        <p>Two reasons: the simulator's transition function is a black box (no $\partial f/\partial s$, $\partial f/\partial a$ available), and with discrete actions or contact thresholds the return is a step function whose derivative is zero almost everywhere and undefined at jumps.</p>
+      </details>
+      <details class="quiz">
+        <summary>2. Where does the $\epsilon/\sigma$ in Algorithm 1 come from?</summary>
+        <p>The score function of $\mathcal{N}(\theta,\sigma^2I)$ with respect to the mean is $(\tilde\theta-\theta)/\sigma^2$; with $\tilde\theta=\theta+\sigma\epsilon$ this equals $\sigma\epsilon/\sigma^2=\epsilon/\sigma$.</p>
+      </details>
+      <details class="quiz">
+        <summary>3. Why does antithetic sampling reduce variance?</summary>
+        <p>The plain estimator contains the zero-mean but high-variance term $F(\theta)\epsilon/\sigma$. Pairing $+\epsilon$ with $-\epsilon$ subtracts the returns, so this baseline cancels exactly and only the slope term $(\epsilon\epsilon^\top)\nabla F$ remains.</p>
+      </details>
+      <details class="quiz">
+        <summary>4. What does each worker transmit per generation, and why is that enough?</summary>
+        <p>A scalar return plus the index (seed) of the noise it used. Since every worker holds the same noise table, it can reconstruct all $\epsilon_j$ locally and compute the identical update $\theta_{t+1}=\theta_t+\frac{\alpha}{n\sigma}\sum_jF_j\epsilon_j$.</p>
+      </details>
+      <details class="quiz">
+        <summary>5. Why does capping episodes at $m = 2\bar L$ guarantee at least 50% CPU utilization?</summary>
+        <p>Useful work is $n\bar L$; wall-clock time is at most $m$ steps, so capacity is at most $nm$. Utilization $\ge n\bar L/(nm) = \bar L/m = 1/2$.</p>
+      </details>
+      <details class="quiz">
+        <summary>6. Why is ES's gradient variance independent of episode length $T$ while PG's is not?</summary>
+        <p>PG's score $\nabla_\theta\log p(\mathbf{a};\theta)=\sum_{t=1}^T\nabla_\theta\log p(a_t;\theta)$ is a sum of $T$ uncorrelated terms, so its variance grows nearly linearly with $T$. ES's score $\epsilon/\sigma$ comes from a single noise draw per episode and does not depend on $T$.</p>
+      </details>
+
+      <h3>Key Takeaways</h3>
+      <ul class="takeaways">
+        <li>ES maximizes the Gaussian-blurred objective $J_\sigma(\theta)=\mathbb{E}_\epsilon F(\theta+\sigma\epsilon)$, which is smooth even when $F$ is a step function.</li>
+        <li>The log-derivative trick turns $\nabla J_\sigma$ into $\frac1\sigma\mathbb{E}[F(\theta+\sigma\epsilon)\epsilon]$, which needs only returns from black-box rollouts.</li>
+        <li>Antithetic pairs, centered ranks, weight decay, fixed $\sigma$ and an episode cap make that estimator stable and efficient.</li>
+        <li>Shared random seeds shrink communication to a couple of scalars per worker, giving near-linear scaling up to 1,440 cores.</li>
+        <li>VBN (Atari) and action discretization (MuJoCo) make parameter perturbations produce genuinely different behavior, which exploration depends on.</li>
+        <li>The price is data efficiency (about $3\times$–$10\times$ more data); the payoff is wall-clock time, long-horizon robustness, and simplicity.</li>
+      </ul>
     </section>
 
   </main>
+
+  <footer class="site-footer">
+    <p>Source: T. Salimans, J. Ho, X. Chen, S. Sidor, I. Sutskever. <em>Evolution Strategies as a Scalable Alternative to Reinforcement Learning</em>, arXiv:1703.03864v2 (OpenAI, 2017). This curriculum is an educational companion; statements marked as "our arithmetic" or "illustrative" are derived here and are not quotations from the paper.</p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ---------- reading progress bar ---------- */
+      var bar = document.getElementById('progress');
+      function onScroll() {
+        var h = document.documentElement;
+        var max = h.scrollHeight - h.clientHeight;
+        bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      /* ---------- top-bar scroll spy ---------- */
+      if ('IntersectionObserver' in window) {
+        var links = [].slice.call(document.querySelectorAll('.topbar a'));
+        var secs = [].slice.call(document.querySelectorAll('section[id]'));
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              links.forEach(function (a) {
+                a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+              });
+            }
+          });
+        }, { rootMargin: '-30% 0px -60% 0px' });
+        secs.forEach(function (s) { io.observe(s); });
+      }
+
+      /* ---------- light syntax highlighting (comments and keywords) ---------- */
+      [].slice.call(document.querySelectorAll('pre code')).forEach(function (el) {
+        el.innerHTML = el.innerHTML.replace(/(#[^\n]*)|\b(def|return|for|in|class|import|if|else)\b/g, function (m, c, k) {
+          return c ? '<span class="c">' + c + '</span>' : '<span class="k">' + k + '</span>';
+        });
+      });
+
+      /* ---------- interactive Gaussian-smoothing lab ---------- */
+      function erf(x) {
+        var s = x < 0 ? -1 : 1; x = Math.abs(x);
+        var t = 1 / (1 + 0.3275911 * x);
+        var poly = ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t;
+        return s * (1 - poly * Math.exp(-x * x));
+      }
+      function Phi(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+      function phi(z) { return Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI); }
+      function randn() {
+        var u = 0, v = Math.random();
+        while (u === 0) u = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+      function F(t) { return t >= 2 ? 10 : 0; }
+      function $(id) { return document.getElementById(id); }
+
+      var cache = [];
+      function update(resample) {
+        var th = +$('sl-theta').value, sg = +$('sl-sigma').value, n = +$('sl-n').value;
+        $('v-theta').textContent = th.toFixed(2);
+        $('v-sigma').textContent = sg.toFixed(2);
+        $('v-n').textContent = n;
+
+        /* smoothed curve and exact quantities */
+        var pts = [], i;
+        for (i = 0; i <= 80; i++) {
+          var t = i * 0.05;
+          pts.push((i === 0 ? 'M' : 'L') + (60 + 160 * t).toFixed(1) + ' ' + (220 - 18 * 10 * Phi((t - 2) / sg)).toFixed(1));
+        }
+        $('lab-curve').setAttribute('d', pts.join(''));
+
+        var z = (th - 2) / sg;
+        var J = 10 * Phi(z);
+        var g = (10 / sg) * phi(z);
+        var mx = 60 + 160 * th, my = 220 - 18 * J;
+        $('lab-marker').setAttribute('cx', mx);
+        $('lab-marker').setAttribute('cy', my);
+        var m = -18 * g / 160;                       /* pixel slope of the tangent */
+        var dx = 40 / Math.sqrt(1 + m * m);
+        var tan = $('lab-tan');
+        tan.setAttribute('x1', mx - dx); tan.setAttribute('y1', my - m * dx);
+        tan.setAttribute('x2', mx + dx); tan.setAttribute('y2', my + m * dx);
+
+        /* Monte-Carlo estimators */
+        if (resample || cache.length !== n) {
+          cache = [];
+          for (i = 0; i < n; i++) cache.push(randn());
+        }
+        var sumPlain = 0, sumAnti = 0;
+        for (i = 0; i < n; i++) {
+          var e = cache[i];
+          sumPlain += F(th + sg * e) * e;
+          sumAnti += (F(th + sg * e) - F(th - sg * e)) * e;
+        }
+        var plain = sumPlain / (n * sg);
+        var anti = sumAnti / (2 * n * sg);
+
+        $('o-raw').textContent = F(th) + ' / 0';
+        $('o-j').textContent = J.toFixed(3);
+        $('o-g').textContent = g.toFixed(3);
+        $('o-plain').textContent = plain.toFixed(3);
+        $('o-anti').textContent = anti.toFixed(3);
+      }
+
+      ['sl-theta', 'sl-sigma', 'sl-n'].forEach(function (id) {
+        $(id).addEventListener('input', function () { update(false); });
+      });
+      $('btn-resample').addEventListener('click', function () { update(true); });
+      update(true);
+    })();
+  </script>
 </body>
 </html>

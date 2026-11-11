@@ -4,40 +4,62 @@ import numpy as np
 import gymnasium as gym
 
 # ==============================================================================
-# 1. ENVIRONMENT CONFIGURATIONS (Table 2 & Section 2.2 / 4.1 Defaults)
+# 1. DETERMINISTIC 30-SEED BENCHMARK SUITE & ENVIRONMENT CONFIGS
 # ==============================================================================
+BENCHMARK_SEEDS = list(range(1001, 1031))  # 30 explicit independent seeds: 1001..1030
+
 ENV_CONFIGS = {
     "Swimmer-v4": {
-        "ac_bins": 10,       # Paper Section 2.2 & 4.1: 10 uniform bins encourage exploration
+        "ac_bins": 10,                # Paper Section 2.2 & 4.1: 10 uniform bins encourage exploration
         "lr": 0.01,
         "sigma": 0.02,
         "l2coeff": 0.005,
         "pop_size": 64,
         "target_score": 365.0,
+        "paper_es_score": 365.0,
+        "paper_trpo_score": 366.0,
+        "default_generations": 150,
+        "default_max_evaluations": 9600,   # 150 gens * 64 pop_size
+        "default_max_timesteps": 9_600_000,
     },
     "Hopper-v4": {
-        "ac_bins": 10,       # Paper Section 2.2 & 4.1: Discretized actions for Hopper
+        "ac_bins": 10,                # Paper Section 2.2 & 4.1: Discretized actions for Hopper
         "lr": 0.01,
         "sigma": 0.02,
         "l2coeff": 0.005,
         "pop_size": 64,
         "target_score": 3000.0,
+        "paper_es_score": 3000.0,
+        "paper_trpo_score": 3100.0,
+        "default_generations": 150,
+        "default_max_evaluations": 9600,
+        "default_max_timesteps": 2_000_000,
     },
     "HalfCheetah-v4": {
-        "ac_bins": None,     # Continuous actions work natively for HalfCheetah
+        "ac_bins": None,              # Continuous actions (tanh)
         "lr": 0.01,
         "sigma": 0.02,
         "l2coeff": 0.005,
         "pop_size": 64,
         "target_score": 3000.0,
+        "paper_es_score": 3000.0,
+        "paper_trpo_score": 2800.0,
+        "default_generations": 150,
+        "default_max_evaluations": 9600,
+        "default_max_timesteps": 9_600_000,
     },
     "Walker2d-v4": {
-        "ac_bins": None,     # Continuous actions
+        "ac_bins": None,              # Continuous actions (tanh)
         "lr": 0.01,
         "sigma": 0.02,
         "l2coeff": 0.005,
         "pop_size": 64,
         "target_score": 2500.0,
+        "paper_es_score": 2500.0,
+        "paper_trpo_score": 2800.0,
+        "default_generations": 150,
+        "default_max_evaluations": 9600,
+        "default_max_timesteps": 2_500_000,
     },
     "Ant-v4": {
         "ac_bins": None,
@@ -46,6 +68,11 @@ ENV_CONFIGS = {
         "l2coeff": 0.005,
         "pop_size": 128,
         "target_score": 2500.0,
+        "paper_es_score": 2500.0,
+        "paper_trpo_score": 2600.0,
+        "default_generations": 150,
+        "default_max_evaluations": 19200,
+        "default_max_timesteps": 10_000_000,
     },
     "Humanoid-v4": {
         "ac_bins": None,
@@ -54,6 +81,11 @@ ENV_CONFIGS = {
         "l2coeff": 0.005,
         "pop_size": 256,
         "target_score": 5000.0,
+        "paper_es_score": 5000.0,
+        "paper_trpo_score": 5200.0,
+        "default_generations": 150,
+        "default_max_evaluations": 38400,
+        "default_max_timesteps": 20_000_000,
     },
 }
 
@@ -75,6 +107,16 @@ def compute_centered_ranks(x: np.ndarray) -> np.ndarray:
     y /= (x.size - 1)
     y -= 0.5
     return y
+
+
+def compute_standardized_returns(x: np.ndarray) -> np.ndarray:
+    """Z-score standardization of raw returns (used for no-rank-shaping ablation)."""
+    flat = x.astype(np.float32)
+    mean = np.mean(flat)
+    std = np.std(flat)
+    if std < 1e-8:
+        return np.zeros_like(flat)
+    return ((flat - mean) / (std + 1e-8)).astype(np.float32)
 
 
 class Adam:
@@ -145,7 +187,7 @@ class MujocoMLPPolicy:
         self.obs_dim = obs_dim
         self.act_dim = act_dim
         self.hidden_dims = hidden_dims
-        self.ac_bins = ac_bins
+        self.ac_bins = ac_bins if (ac_bins is not None and ac_bins > 1) else None
         rng = np.random.RandomState(seed)
 
         dims = [obs_dim] + list(hidden_dims) + [act_dim]
@@ -163,7 +205,7 @@ class MujocoMLPPolicy:
         self.theta = np.concatenate(params).astype(np.float32)
         self.num_params = len(self.theta)
 
-        if self.ac_bins is not None and self.ac_bins > 1:
+        if self.ac_bins is not None:
             self.bin_edges = np.linspace(-1.0, 1.0, self.ac_bins)
         else:
             self.bin_edges = None
@@ -198,6 +240,8 @@ def make_tracked_env(env_id: str, render_mode: str = "rgb_array"):
     Creates a Gymnasium MuJoCo environment configured with the built-in 'track' camera
     so the camera automatically follows the agent's center of mass.
     """
+    if render_mode is None:
+        return gym.make(env_id)
     try:
         env = gym.make(env_id, render_mode=render_mode, camera_name="track")
     except Exception:
@@ -212,12 +256,10 @@ def render_tracked_frame(env) -> np.ndarray:
     """
     unwrapped = env.unwrapped
     try:
-        # Attempt to lock free camera lookat onto torso x/y coordinates
         renderer = getattr(unwrapped, "mujoco_renderer", None)
         if renderer is not None:
             viewer = getattr(renderer, "viewer", None)
             if viewer is not None and hasattr(viewer, "cam"):
-                # If camera is in free mode (type 0), manually track root x position
                 if getattr(viewer.cam, "type", 0) == 0:
                     viewer.cam.lookat[0] = float(unwrapped.data.qpos[0])
                     if env.spec.id.startswith("Swimmer") and len(unwrapped.data.qpos) > 1:
