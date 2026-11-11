@@ -1,5 +1,5 @@
 seed,env_id,algo,ac_bins,generations,total_evaluations,total_timesteps,final_eval_return,best_eval_return,wall_time_sec
-1001,Swimmer-v4,es,10,150,9600,9600000,362.72,363.93,137.95
+1001,Swimmer-v4,es,10,150,9600,9600000,362.72,363.93,153.78
 1002,Swimmer-v4,es,10,150,9600,9600000,128.65,133.25,140.37
 1003,Swimmer-v4,es,10,150,9600,9600000,119.89,123.23,152.62
 1004,Swimmer-v4,es,10,150,9600,9600000,122.86,123.98,148.19

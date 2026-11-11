@@ -16,6 +16,7 @@ from multiprocessing import Pool, RawArray
 
 from es_core import BENCHMARK_SEEDS, ENV_CONFIGS, MujocoMLPPolicy
 from train_es_mujoco import init_worker, run_single_seed_training
+from evaluate_and_record import evaluate_and_record
 from generate_report import generate_all_reports
 
 
@@ -282,67 +283,76 @@ def run_30seed_experiment(
     ) as pool:
 
         for idx, s in enumerate(seeds, start=1):
-            seed_csv_path = os.path.join(raw_seeds_dir, f"seed_{s}_metrics.csv")
+                seed_csv_path = os.path.join(raw_seeds_dir, f"seed_{s}_metrics.csv")
+                video_dir = os.path.join(exp_dir, "videos")
+                need_milestone_videos = (idx == 1) and (not os.path.exists(video_dir) or len(os.listdir(video_dir)) < 5)
 
-            if resume and os.path.exists(seed_csv_path):
-                existing_rows = load_seed_csv(seed_csv_path)
-                if len(existing_rows) >= generations or (
-                    max_evaluations is not None and existing_rows and existing_rows[-1]["total_evaluations"] >= max_evaluations
-                ) or (
-                    max_timesteps is not None and existing_rows and existing_rows[-1]["total_timesteps"] >= max_timesteps
-                ):
-                    final_ret = existing_rows[-1]["eval_return"]
-                    best_ret = existing_rows[-1]["best_eval_return"]
-                    print(
-                        f"[{idx:02d}/{len(seeds):02d}] Seed {s} — SKIPPED (already completed: "
-                        f"Final={final_ret:.1f}, Best={best_ret:.1f})"
-                    )
-                    continue
+                if resume and os.path.exists(seed_csv_path) and not need_milestone_videos:
+                    existing_rows = load_seed_csv(seed_csv_path)
+                    if len(existing_rows) >= generations or (
+                        max_evaluations is not None and existing_rows and existing_rows[-1]["total_evaluations"] >= max_evaluations
+                    ) or (
+                        max_timesteps is not None and existing_rows and existing_rows[-1]["total_timesteps"] >= max_timesteps
+                    ):
+                        final_ret = existing_rows[-1]["eval_return"]
+                        best_ret = existing_rows[-1]["best_eval_return"]
+                        print(
+                            f"[{idx:02d}/{len(seeds):02d}] Seed {s} — SKIPPED (already completed: "
+                            f"Final={final_ret:.1f}, Best={best_ret:.1f})"
+                        )
+                        continue
 
-            noise_np[:] = np.random.RandomState(s).randn(noise_table_size).astype(np.float32)
+                noise_np[:] = np.random.RandomState(s).randn(noise_table_size).astype(np.float32)
 
-            res = run_single_seed_training(
-                env_id=env_id,
-                seed=s,
-                generations=generations,
-                max_timesteps=max_timesteps,
-                max_evaluations=max_evaluations,
-                pop_size=pop_size,
-                sigma=sigma,
-                lr=lr,
-                l2coeff=l2coeff,
-                ac_bins_override=ac_bins_override,
-                algo=algo,
-                workers=workers,
-                num_videos=0,
-                no_video=True,
-                noise_table_size=noise_table_size,
-                run_dir=exp_dir,
-                metrics_csv_path=seed_csv_path,
-                save_checkpoints=False,
-                external_pool=pool,
-                external_shared_buffers=shared_buffers,
-                verbose=False,
-            )
+                # Record 5 milestone progression videos ONLY for the first seed (idx == 1)
+                record_this_seed = (idx == 1)
 
-            if res["best_eval_return"] > global_best_return and res["best_ckpt_payload"] is not None:
-                global_best_return = res["best_eval_return"]
-                with open(best_ckpt_path, "wb") as f:
-                    pickle.dump(res["best_ckpt_payload"], f)
+                res = run_single_seed_training(
+                    env_id=env_id,
+                    seed=s,
+                    generations=generations,
+                    max_timesteps=max_timesteps,
+                    max_evaluations=max_evaluations,
+                    pop_size=pop_size,
+                    sigma=sigma,
+                    lr=lr,
+                    l2coeff=l2coeff,
+                    ac_bins_override=ac_bins_override,
+                    algo=algo,
+                    workers=workers,
+                    num_videos=5 if record_this_seed else 0,
+                    no_video=not record_this_seed,
+                    noise_table_size=noise_table_size,
+                    run_dir=exp_dir,
+                    metrics_csv_path=seed_csv_path,
+                    save_checkpoints=False,
+                    external_pool=pool,
+                    external_shared_buffers=shared_buffers,
+                    verbose=record_this_seed,
+                )
 
-            print(
-                f"[{idx:02d}/{len(seeds):02d}] Seed {s} Complete | "
-                f"Gens: {res['total_generations']:3d} | Evals: {res['total_evaluations']:6d} | "
-                f"Steps: {res['total_timesteps']:8,d} | FinalRet: {res['final_eval_return']:7.1f} | "
-                f"BestRet: {res['best_eval_return']:7.1f} | Time: {res['wall_time_sec']:.1f}s"
-            )
+                if res["best_eval_return"] > global_best_return and res["best_ckpt_payload"] is not None:
+                    global_best_return = res["best_eval_return"]
+                    with open(best_ckpt_path, "wb") as f:
+                        pickle.dump(res["best_ckpt_payload"], f)
 
-            aggregate_experiment_telemetry(exp_dir, env_id, algo, ac_bins, seeds)
+                print(
+                    f"[{idx:02d}/{len(seeds):02d}] Seed {s} Complete | "
+                    f"Gens: {res['total_generations']:3d} | Evals: {res['total_evaluations']:6d} | "
+                    f"Steps: {res['total_timesteps']:8,d} | FinalRet: {res['final_eval_return']:7.1f} | "
+                    f"BestRet: {res['best_eval_return']:7.1f} | Time: {res['wall_time_sec']:.1f}s"
+                )
 
-    aggregate_experiment_telemetry(exp_dir, env_id, algo, ac_bins, seeds)
-    total_min = (time.time() - suite_t0) / 60.0
-    print(f"--> Finished 30-seed experiment '{exp_name}' in {total_min:.2f} minutes. Aggregated CSVs saved in {exp_dir}/")
+                aggregate_experiment_telemetry(exp_dir, env_id, algo, ac_bins, seeds)
 
+        aggregate_experiment_telemetry(exp_dir, env_id, algo, ac_bins, seeds)
+
+        # Generate the final showcase video and 5 PNG snapshots from the best checkpoint
+        if os.path.exists(best_ckpt_path):
+            evaluate_and_record(checkpoint_path=best_ckpt_path, env_id=env_id, num_episodes=3)
+
+        total_min = (time.time() - suite_t0) / 60.0
+        print(f"--> Finished 30-seed experiment '{exp_name}' in {total_min:.2f} minutes. Aggregated CSVs saved in {exp_dir}/")
 
 def main():
     parser = argparse.ArgumentParser(description="30-Seed Statistical Benchmark & Ablation Runner for OpenAI ES")

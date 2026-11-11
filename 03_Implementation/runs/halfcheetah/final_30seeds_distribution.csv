@@ -1,5 +1,5 @@
 seed,env_id,algo,ac_bins,generations,total_evaluations,total_timesteps,final_eval_return,best_eval_return,wall_time_sec
-1001,HalfCheetah-v4,es,continuous,150,9600,9600000,5396.66,5586.14,113.25
+1001,HalfCheetah-v4,es,continuous,150,9600,9600000,5396.66,5586.14,127.90
 1002,HalfCheetah-v4,es,continuous,150,9600,9600000,6043.18,6043.18,116.78
 1003,HalfCheetah-v4,es,continuous,150,9600,9600000,5187.78,5392.80,114.99
 1004,HalfCheetah-v4,es,continuous,150,9600,9600000,5403.33,6199.80,116.84

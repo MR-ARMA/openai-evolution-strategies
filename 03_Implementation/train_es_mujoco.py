@@ -118,7 +118,7 @@ def run_single_seed_training(
     ac_bins_override: int = -1,
     algo: str = "es",
     workers: int = None,
-    num_videos: int = 10,
+    num_videos: int = 5,
     no_video: bool = False,
     dynamic_cap: bool = False,
     noise_table_size: int = 30_000_000,
@@ -499,7 +499,7 @@ def main():
     parser.add_argument("--ac_bins", type=int, default=-1)
     parser.add_argument("--algo", type=str, default="es", choices=["es", "es_no_rank", "random_search"])
     parser.add_argument("--workers", type=int, default=os.cpu_count() or 16, help="Parallel CPU workers (defaults to all logical cores)")
-    parser.add_argument("--num_videos", type=int, default=10)
+    parser.add_argument("--num_videos", type=int, default=5)
     parser.add_argument("--no_video", action="store_true")
     parser.add_argument("--noise_table_size", type=int, default=30_000_000)
     parser.add_argument("--dynamic_cap", action="store_true")

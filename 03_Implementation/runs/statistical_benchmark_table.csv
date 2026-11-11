@@ -1,0 +1,5 @@
+experiment,env_id,algo,action_space,num_seeds,mean_evaluations,mean_timesteps,best_return_mean,best_return_std,best_return_median,best_return_iqr,best_return_max,best_return_min,final_gen_return_mean,final_gen_return_std,paper_target,mean_wall_time_sec
+halfcheetah,HalfCheetah-v4,es,Continuous (tanh),30,9600,9600000,4890.01,926.38,5204.51,1234.86,6199.80,2721.45,4430.02,1532.70,3000.0,118.19
+hopper,Hopper-v4,es,10 Bins,30,9600,8202881,1316.87,437.07,1194.66,43.13,2884.08,1028.14,1291.11,424.34,3000.0,195.22
+swimmer,Swimmer-v4,es,10 Bins,30,9600,9600000,244.21,106.93,305.85,192.25,363.93,52.90,239.41,106.03,365.0,149.48
+walker2d,Walker2d-v4,es,Continuous (tanh),30,9600,7304445,1977.70,667.42,1745.05,1100.56,3391.28,1004.91,1869.90,691.04,2500.0,169.69
